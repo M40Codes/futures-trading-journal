@@ -1,3 +1,7 @@
 node_modules/
 .env
+journal-data.json
+journal-data.json.tmp
+tradovate-session.json
+tradovate-session.json.tmp
 .DS_Store

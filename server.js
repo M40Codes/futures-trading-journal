@@ -10,6 +10,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const port = Number(process.env.PORT || 8000);
 const dataFilePath = path.join(__dirname, process.env.JOURNAL_DATA_FILE || "journal-data.json");
+const tradovateSessionPath = path.join(__dirname, process.env.TRADOVATE_SESSION_FILE || "tradovate-session.json");
 
 const POINT_VALUES = {
   ES: 50,
@@ -143,6 +144,7 @@ async function handleConnect(body = {}) {
     session.token = auth.accessToken;
     session.userId = auth.userId;
     session.expiresAt = auth.expirationTime;
+    await saveTradovateSession();
 
     return ok({
       connected: true,
@@ -157,6 +159,7 @@ async function handleConnect(body = {}) {
 
 async function handleSync(query = {}) {
   try {
+    await loadTradovateSession();
     assertConnected();
 
     const accountId = query.accountId || process.env.TRADOVATE_ACCOUNT_ID || "";
@@ -609,6 +612,41 @@ function assertConnected() {
     const error = new Error("Not connected to Tradovate. Connect first.");
     error.status = 401;
     throw error;
+  }
+}
+
+async function saveTradovateSession() {
+  if (!session.token) return;
+  const data = {
+    environment: session.environment,
+    baseUrl: session.baseUrl,
+    token: session.token,
+    userId: session.userId,
+    expiresAt: session.expiresAt,
+    savedAt: new Date().toISOString(),
+  };
+
+  const temporaryPath = `${tradovateSessionPath}.tmp`;
+  await fs.promises.writeFile(temporaryPath, JSON.stringify(data, null, 2));
+  await fs.promises.rename(temporaryPath, tradovateSessionPath);
+}
+
+async function loadTradovateSession() {
+  if (session.token) return;
+
+  try {
+    const text = await fs.promises.readFile(tradovateSessionPath, "utf8");
+    const data = JSON.parse(text);
+    if (!data.token) return;
+    session = {
+      environment: data.environment || "demo",
+      baseUrl: data.baseUrl || baseUrlFor(data.environment || "demo"),
+      token: data.token,
+      userId: data.userId || null,
+      expiresAt: data.expiresAt || null,
+    };
+  } catch {
+    // No saved token yet. The user needs to connect first.
   }
 }
 
