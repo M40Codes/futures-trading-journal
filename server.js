@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
+import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 await optionalDotenv();
@@ -8,6 +9,7 @@ await optionalDotenv();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const port = Number(process.env.PORT || 8000);
+const dataFilePath = path.join(__dirname, process.env.JOURNAL_DATA_FILE || "journal-data.json");
 
 const POINT_VALUES = {
   ES: 50,
@@ -43,10 +45,27 @@ const express = await optionalExpress();
 if (express) {
   const app = express();
   app.use(express.json({ limit: "1mb" }));
+  app.get("/login", (_request, response) => response.sendFile(path.join(__dirname, "login.html")));
+  app.get("/api/auth/status", (request, response) => sendExpress(response, handleAuthStatus(request.headers.cookie)));
+  app.post("/api/auth/login", async (request, response) => sendExpress(response, handleLogin(request.body, response)));
+  app.post("/api/auth/logout", (_request, response) => sendExpress(response, handleLogout(response)));
+  app.use((request, response, next) => {
+    if (isAllowedWithoutAuth(request.path) || isAuthenticated(request.headers.cookie)) {
+      next();
+      return;
+    }
+    if (request.path.startsWith("/api/")) {
+      response.status(401).json({ error: "Login required." });
+      return;
+    }
+    response.redirect("/login");
+  });
   app.use(express.static(__dirname));
   app.get("/api/tradovate/status", async (_request, response) => sendExpress(response, await handleStatus()));
   app.post("/api/tradovate/connect", async (request, response) => sendExpress(response, await handleConnect(request.body)));
   app.get("/api/tradovate/sync", async (request, response) => sendExpress(response, await handleSync(request.query)));
+  app.get("/api/journal", async (_request, response) => sendExpress(response, await handleJournalLoad()));
+  app.post("/api/journal", async (request, response) => sendExpress(response, await handleJournalSave(request.body)));
   app.listen(port, () => console.log(`Futures journal running at http://localhost:${port} with Express`));
 } else {
   http.createServer(nativeHandler).listen(port, () => {
@@ -175,6 +194,36 @@ async function handleSync(query = {}) {
 async function nativeHandler(request, response) {
   const url = new URL(request.url, `http://${request.headers.host}`);
 
+  if (request.method === "GET" && url.pathname === "/login") {
+    serveFile(path.join(__dirname, "login.html"), response);
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/auth/status") {
+    sendNative(response, handleAuthStatus(request.headers.cookie));
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/auth/login") {
+    sendNative(response, handleLogin(await readJson(request), response));
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/auth/logout") {
+    sendNative(response, handleLogout(response));
+    return;
+  }
+
+  if (!isAllowedWithoutAuth(url.pathname) && !isAuthenticated(request.headers.cookie)) {
+    if (url.pathname.startsWith("/api/")) {
+      sendNative(response, fail(401, "Login required."));
+      return;
+    }
+    response.writeHead(302, { Location: "/login" });
+    response.end();
+    return;
+  }
+
   if (request.method === "GET" && url.pathname === "/api/tradovate/status") {
     sendNative(response, await handleStatus());
     return;
@@ -190,7 +239,143 @@ async function nativeHandler(request, response) {
     return;
   }
 
+  if (request.method === "GET" && url.pathname === "/api/journal") {
+    sendNative(response, await handleJournalLoad());
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/journal") {
+    sendNative(response, await handleJournalSave(await readJson(request)));
+    return;
+  }
+
   serveStatic(url.pathname, response);
+}
+
+function authEnabled() {
+  return Boolean(process.env.JOURNAL_USERNAME && process.env.JOURNAL_PASSWORD);
+}
+
+function handleAuthStatus(cookieHeader) {
+  return ok({
+    enabled: authEnabled(),
+    authenticated: !authEnabled() || isAuthenticated(cookieHeader),
+  });
+}
+
+function handleLogin(body, response) {
+  if (!authEnabled()) {
+    setSessionCookie(response);
+    return ok({ authenticated: true, warning: "Login is not configured. Set JOURNAL_USERNAME and JOURNAL_PASSWORD." });
+  }
+
+  const validUsername = timingSafeEqualText(body.username || "", process.env.JOURNAL_USERNAME);
+  const validPassword = timingSafeEqualText(body.password || "", process.env.JOURNAL_PASSWORD);
+
+  if (!validUsername || !validPassword) {
+    return fail(401, "Invalid username or password.");
+  }
+
+  setSessionCookie(response);
+  return ok({ authenticated: true });
+}
+
+function handleLogout(response) {
+  setHeader(response, "Set-Cookie", "journal_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0");
+  return ok({ authenticated: false });
+}
+
+function isAllowedWithoutAuth(urlPath) {
+  return !authEnabled()
+    || urlPath === "/login"
+    || urlPath === "/login.html"
+    || urlPath === "/api/auth/login"
+    || urlPath === "/api/auth/logout"
+    || urlPath === "/api/auth/status";
+}
+
+function isAuthenticated(cookieHeader = "") {
+  if (!authEnabled()) return true;
+  const cookies = parseCookies(cookieHeader);
+  const token = cookies.journal_session;
+  if (!token) return false;
+  const [payload, signature] = token.split(".");
+  if (!payload || !signature) return false;
+  return timingSafeEqualText(signature, signSession(payload));
+}
+
+function setSessionCookie(response) {
+  const payload = Buffer.from(JSON.stringify({
+    user: process.env.JOURNAL_USERNAME || "local",
+    createdAt: Date.now(),
+  })).toString("base64url");
+  const token = `${payload}.${signSession(payload)}`;
+  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+  setHeader(response, "Set-Cookie", `journal_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800${secure}`);
+}
+
+function signSession(payload) {
+  const secret = process.env.SESSION_SECRET || process.env.JOURNAL_PASSWORD || "local-dev-secret";
+  return crypto.createHmac("sha256", secret).update(payload).digest("base64url");
+}
+
+function parseCookies(cookieHeader = "") {
+  return Object.fromEntries(cookieHeader.split(";").map((cookie) => {
+    const [key, ...valueParts] = cookie.trim().split("=");
+    return [key, valueParts.join("=")];
+  }).filter(([key]) => key));
+}
+
+function timingSafeEqualText(left, right = "") {
+  const leftBuffer = Buffer.from(String(left));
+  const rightBuffer = Buffer.from(String(right));
+  if (leftBuffer.length !== rightBuffer.length) return false;
+  return crypto.timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+function setHeader(response, key, value) {
+  if (typeof response.setHeader === "function") {
+    response.setHeader(key, value);
+    return;
+  }
+  response.set(key, value);
+}
+
+async function handleJournalLoad() {
+  return ok(await readJournalData());
+}
+
+async function handleJournalSave(body = {}) {
+  const data = {
+    trades: Array.isArray(body.trades) ? body.trades : [],
+    scorecards: body.scorecards && typeof body.scorecards === "object" ? body.scorecards : {},
+    screenshots: body.screenshots && typeof body.screenshots === "object" ? body.screenshots : {},
+    savedAt: new Date().toISOString(),
+  };
+
+  await writeJournalData(data);
+  return ok({ saved: true, savedAt: data.savedAt });
+}
+
+async function readJournalData() {
+  try {
+    const text = await fs.promises.readFile(dataFilePath, "utf8");
+    const data = JSON.parse(text);
+    return {
+      trades: Array.isArray(data.trades) ? data.trades : [],
+      scorecards: data.scorecards && typeof data.scorecards === "object" ? data.scorecards : {},
+      screenshots: data.screenshots && typeof data.screenshots === "object" ? data.screenshots : {},
+      savedAt: data.savedAt || null,
+    };
+  } catch {
+    return { trades: [], scorecards: {}, screenshots: {}, savedAt: null };
+  }
+}
+
+async function writeJournalData(data) {
+  const temporaryPath = `${dataFilePath}.tmp`;
+  await fs.promises.writeFile(temporaryPath, JSON.stringify(data, null, 2));
+  await fs.promises.rename(temporaryPath, dataFilePath);
 }
 
 function sendExpress(response, result) {
@@ -237,6 +422,19 @@ function serveStatic(urlPath, response) {
     return;
   }
 
+  fs.stat(filePath, (statError, stats) => {
+    if (statError || !stats.isFile()) {
+      response.writeHead(404);
+      response.end("Not found");
+      return;
+    }
+
+    response.writeHead(200, { "Content-Type": contentType(filePath) });
+    fs.createReadStream(filePath).pipe(response);
+  });
+}
+
+function serveFile(filePath, response) {
   fs.stat(filePath, (statError, stats) => {
     if (statError || !stats.isFile()) {
       response.writeHead(404);

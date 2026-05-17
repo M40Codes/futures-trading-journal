@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login | Futures Trading Journal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #070b13;
+      --panel: #0d1320;
+      --line: #202a3b;
+      --ink: #eef4ff;
+      --muted: #8d9bb0;
+      --accent: #2dd4bf;
+      --accent-2: #60a5fa;
+      --loss: #fb7185;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      display: grid;
+      min-height: 100vh;
+      margin: 0;
+      place-items: center;
+      background:
+        radial-gradient(circle at 16% 8%, rgba(45, 212, 191, 0.18), transparent 24rem),
+        radial-gradient(circle at 90% 16%, rgba(96, 165, 250, 0.14), transparent 24rem),
+        var(--bg);
+      color: var(--ink);
+      font-family: Inter, system-ui, sans-serif;
+    }
+
+    main {
+      width: min(420px, calc(100% - 28px));
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 26px;
+      background: linear-gradient(180deg, rgba(17, 24, 39, 0.96), rgba(10, 16, 27, 0.96));
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.34);
+    }
+
+    .brand {
+      display: grid;
+      width: 46px;
+      height: 46px;
+      place-items: center;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #06111d;
+      font-weight: 900;
+    }
+
+    h1 {
+      margin: 18px 0 8px;
+      font-size: 1.8rem;
+      line-height: 1;
+    }
+
+    p {
+      margin: 0 0 22px;
+      color: var(--muted);
+    }
+
+    label {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 14px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 800;
+    }
+
+    input {
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 0 12px;
+      background: #080d18;
+      color: var(--ink);
+      font: inherit;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.12);
+    }
+
+    button {
+      width: 100%;
+      min-height: 44px;
+      border: 0;
+      border-radius: 7px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #04111f;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 900;
+    }
+
+    .error {
+      min-height: 20px;
+      margin-top: 14px;
+      color: var(--loss);
+      font-size: 0.88rem;
+      font-weight: 800;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="brand">FJ</div>
+    <h1>Journal Login</h1>
+    <p>Sign in to open your futures trading journal.</p>
+    <form id="loginForm">
+      <label>
+        <span>Username</span>
+        <input id="username" autocomplete="username" required>
+      </label>
+      <label>
+        <span>Password</span>
+        <input id="password" type="password" autocomplete="current-password" required>
+      </label>
+      <button type="submit">Sign In</button>
+      <div class="error" id="errorMessage"></div>
+    </form>
+  </main>
+
+  <script>
+    const form = document.querySelector("#loginForm");
+    const errorMessage = document.querySelector("#errorMessage");
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      errorMessage.textContent = "";
+
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: document.querySelector("#username").value,
+          password: document.querySelector("#password").value,
+        }),
+      });
+
+      if (response.ok) {
+        window.location.href = "/";
+        return;
+      }
+
+      const data = await response.json().catch(() => ({}));
+      errorMessage.textContent = data.error || "Unable to sign in.";
+    });
+  </script>
+</body>
+</html>

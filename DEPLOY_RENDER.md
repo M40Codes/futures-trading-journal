@@ -31,6 +31,9 @@ Minimum:
 
 ```text
 NODE_ENV=production
+JOURNAL_USERNAME=choose_a_username
+JOURNAL_PASSWORD=choose_a_strong_password
+SESSION_SECRET=use_a_long_random_secret
 TRADOVATE_ENV=demo
 TRADOVATE_APP_ID=FuturesJournal
 TRADOVATE_APP_VERSION=1.0
@@ -61,4 +64,6 @@ That URL is not local.
 
 The app is public once deployed. Keep the repo private and put secrets only in Render environment variables.
 
-Journal entries currently use browser localStorage. To share the same journal across devices, add a database and login next.
+Journal entries sync through the hosted server into `journal-data.json`, with browser localStorage as a fallback.
+
+Render free services may not preserve local disk data across redeploys or instance replacement. For durable multi-device storage, add Postgres next.

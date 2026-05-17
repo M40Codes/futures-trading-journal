@@ -14,3 +14,9 @@ services:
         value: FuturesJournal
       - key: TRADOVATE_APP_VERSION
         value: "1.0"
+      - key: JOURNAL_USERNAME
+        sync: false
+      - key: JOURNAL_PASSWORD
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true

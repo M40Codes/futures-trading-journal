@@ -91,6 +91,8 @@ On a cloud Docker host, set the same variables from `.env.production.example` in
 
 - Use a private repo if you store this project online.
 - Never commit `.env`.
+- Set `JOURNAL_USERNAME`, `JOURNAL_PASSWORD`, and `SESSION_SECRET` in Render to enable the login page.
 - Rotate any password that was shared in chat or screenshots.
 - Prefer demo mode until you confirm the sync is importing trades correctly.
-- A hosted app stores journal data in each browser's `localStorage`; for multi-device shared data, the next step is adding a real database.
+- The hosted app now syncs journal state through `/api/journal` into `journal-data.json` on the server, while keeping browser `localStorage` as a fallback.
+- Render free services may not preserve local disk data across redeploys or instance replacement. For durable multi-device storage, add Postgres next.

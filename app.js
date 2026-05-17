@@ -24,6 +24,7 @@ const searchInput = document.querySelector("#searchInput");
 const outcomeFilter = document.querySelector("#outcomeFilter");
 const seedButton = document.querySelector("#seedButton");
 const clearButton = document.querySelector("#clearButton");
+const logoutButton = document.querySelector("#logoutButton");
 const symbolInput = document.querySelector("#symbol");
 const pointValueInput = document.querySelector("#pointValue");
 const dailyGrid = document.querySelector("#dailyGrid");
@@ -188,6 +189,8 @@ let scorecards = loadScorecard();
 let screenshots = loadScreenshots();
 let editingId = null;
 let calendarDate = new Date();
+let serverSyncReady = false;
+let saveTimer = null;
 
 const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -208,6 +211,7 @@ renderScorecard();
 renderScreenshot();
 render();
 checkTradovateStatus();
+hydrateFromServer();
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -268,6 +272,11 @@ seedButton.addEventListener("click", () => {
   render();
 });
 
+logoutButton.addEventListener("click", async () => {
+  await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+  window.location.href = "/login";
+});
+
 clearButton.addEventListener("click", () => {
   const confirmed = window.confirm("Clear every saved trade from this browser?");
   if (!confirmed) return;
@@ -287,6 +296,7 @@ function loadTrades() {
 
 function saveTrades() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(trades));
+  scheduleServerSave();
 }
 
 function showSection(sectionName) {
@@ -413,6 +423,7 @@ function loadScorecard() {
 
 function saveScorecard() {
   localStorage.setItem(SCORE_STORAGE_KEY, JSON.stringify(scorecards));
+  scheduleServerSave();
 }
 
 function todayKey() {
@@ -441,6 +452,62 @@ function loadScreenshots() {
 
 function saveScreenshots() {
   localStorage.setItem(SCREENSHOT_STORAGE_KEY, JSON.stringify(screenshots));
+  scheduleServerSave();
+}
+
+async function hydrateFromServer() {
+  if (window.location.protocol === "file:") return;
+
+  try {
+    const data = await fetchJson("/api/journal");
+    serverSyncReady = true;
+
+    if (Array.isArray(data.trades) && data.trades.length) {
+      const serverIds = new Set(data.trades.map((item) => item.sourceId || item.id));
+      const localOnly = trades.filter((trade) => !serverIds.has(trade.sourceId || trade.id));
+      trades = [...data.trades, ...localOnly];
+    }
+
+    if (data.scorecards && Object.keys(data.scorecards).length) {
+      scorecards = { ...scorecards, ...data.scorecards };
+    }
+
+    if (data.screenshots && Object.keys(data.screenshots).length) {
+      screenshots = { ...screenshots, ...data.screenshots };
+    }
+
+    saveLocalOnly();
+    renderScorecard();
+    renderScreenshot();
+    render();
+    scheduleServerSave();
+  } catch {
+    serverSyncReady = false;
+  }
+}
+
+function saveLocalOnly() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(trades));
+  localStorage.setItem(SCORE_STORAGE_KEY, JSON.stringify(scorecards));
+  localStorage.setItem(SCREENSHOT_STORAGE_KEY, JSON.stringify(screenshots));
+}
+
+function scheduleServerSave() {
+  if (!serverSyncReady || window.location.protocol === "file:") return;
+  window.clearTimeout(saveTimer);
+  saveTimer = window.setTimeout(saveJournalToServer, 650);
+}
+
+async function saveJournalToServer() {
+  try {
+    await fetchJson("/api/journal", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ trades, scorecards, screenshots }),
+    });
+  } catch {
+    serverSyncReady = false;
+  }
 }
 
 async function saveScreenshotForDate(event) {
