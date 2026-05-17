@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: futures-trading-journal
+    env: node
+    plan: starter
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TRADOVATE_ENV
+        value: demo
+      - key: TRADOVATE_APP_ID
+        value: FuturesJournal
+      - key: TRADOVATE_APP_VERSION
+        value: "1.0"

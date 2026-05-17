@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Futures Trading Journal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-frame">
+    <aside class="sidebar" aria-label="Journal navigation">
+      <div class="brand-mark">FJ</div>
+      <nav>
+        <a class="active" href="#dashboard" data-section="dashboard">Dashboard</a>
+        <a href="#trades" data-section="trades">Trades</a>
+        <a href="#playbook" data-section="playbook">Playbook</a>
+        <a href="#reports" data-section="reports">Reports</a>
+        <a href="#probabilities" data-section="probabilities">Probabilities</a>
+      </nav>
+    </aside>
+
+    <main class="app-shell">
+      <section class="app-section active-section" data-section-panel="dashboard" id="dashboard">
+      <section class="topbar">
+        <div>
+          <p class="eyebrow">Futures Journal</p>
+          <h1>Performance dashboard</h1>
+        </div>
+        <div class="topbar-actions">
+          <button class="ghost-button" id="seedButton" type="button">Load Futures Samples</button>
+          <button class="danger-button" id="clearButton" type="button">Clear</button>
+        </div>
+      </section>
+
+      <section class="notice-panel" id="hostingNotice">
+        Hosted mode gives you a public URL, but journal entries are still saved in this browser. Add a database when you want the same data across devices.
+      </section>
+
+      <section class="metrics-grid" aria-label="Futures performance metrics">
+        <article class="metric gauge-metric">
+          <span>Trade Win</span>
+          <div class="win-gauge" id="winGauge">
+            <div class="gauge-value" id="metricWinRate">0%</div>
+          </div>
+          <div class="gauge-legend">
+            <b class="profit" id="metricWins">0</b>
+            <b id="metricBreakeven">0</b>
+            <b class="loss" id="metricLosses">0</b>
+          </div>
+        </article>
+        <article class="metric">
+          <span>Profit Factor</span>
+          <strong id="metricProfitFactor">0.00</strong>
+          <small id="metricRecord">0W / 0L</small>
+        </article>
+        <article class="metric">
+          <span>Trade Expectancy</span>
+          <strong id="metricExpectancy">$0.00</strong>
+          <small>Average net per trade</small>
+        </article>
+        <article class="metric">
+          <span>Avg Win/Loss Trade</span>
+          <strong id="metricWinLossSpread">$0.00</strong>
+          <div class="win-loss-bar">
+            <i id="avgWinBar"></i>
+            <i id="avgLossBar"></i>
+          </div>
+          <small><b class="profit" id="metricAvgWin">$0.00</b> <b class="loss" id="metricAvgLoss">$0.00</b></small>
+        </article>
+        <article class="metric">
+          <span>Net P&L</span>
+          <strong id="metricNet">$0.00</strong>
+          <small id="metricNetCaption">After commissions</small>
+        </article>
+        <article class="metric">
+          <span>Day Streak</span>
+          <strong id="metricDayStreak">0 days</strong>
+          <small id="metricScoreGrade">Scorecard: 0%</small>
+        </article>
+        <article class="metric">
+          <span>Trade Streak</span>
+          <strong id="metricTradeStreak">0 trades</strong>
+          <small id="metricTrades">0 trades total</small>
+        </article>
+      </section>
+
+      <section class="dashboard-grid">
+        <section class="widget calendar-widget">
+          <div class="widget-header">
+            <div>
+              <h2>Performance Calendar</h2>
+              <p>Monthly P/L, score, and screenshot status</p>
+            </div>
+            <div class="calendar-actions">
+              <button class="icon-button" id="prevMonthButton" type="button" aria-label="Previous month">&lt;</button>
+              <strong id="calendarMonthLabel">Month</strong>
+              <button class="icon-button" id="nextMonthButton" type="button" aria-label="Next month">&gt;</button>
+            </div>
+          </div>
+          <div class="calendar-weekdays" aria-hidden="true">
+            <span>Sun</span>
+            <span>Mon</span>
+            <span>Tue</span>
+            <span>Wed</span>
+            <span>Thu</span>
+            <span>Fri</span>
+            <span>Sat</span>
+            <span>Weekly</span>
+          </div>
+          <div class="daily-grid calendar-grid" id="dailyGrid"></div>
+        </section>
+
+        <section class="widget recent-trades-widget">
+          <div class="widget-header">
+            <div>
+              <h2>Trades</h2>
+              <p>Recent closed futures trades</p>
+            </div>
+          </div>
+          <div class="recent-trades-list" id="recentTradesList"></div>
+        </section>
+      </section>
+
+      <section class="connector-panel">
+        <div class="connector-copy">
+          <p class="eyebrow">Broker Sync</p>
+          <h2>Tradovate Connector</h2>
+          <p id="tradovateStatus">Connector not checked yet.</p>
+        </div>
+
+        <div class="connector-fields">
+          <label>
+            <span>Environment</span>
+            <select id="tradovateEnvironment">
+              <option value="demo">Demo</option>
+              <option value="live">Live</option>
+            </select>
+          </label>
+          <label>
+            <span>Username</span>
+            <input id="tradovateUsername" autocomplete="username" placeholder="Optional if set in .env">
+          </label>
+          <label>
+            <span>Password</span>
+            <input id="tradovatePassword" type="password" autocomplete="current-password" placeholder="Optional if set in .env">
+          </label>
+          <label>
+            <span>Account ID</span>
+            <input id="tradovateAccountId" placeholder="Optional account filter">
+          </label>
+        </div>
+
+        <div class="connector-actions">
+          <button class="ghost-button" id="tradovateConnectButton" type="button">Connect</button>
+          <button class="primary-button" id="tradovateSyncButton" type="button">Sync Trades</button>
+        </div>
+      </section>
+
+      <section class="scorecard-panel">
+        <div class="scorecard-header">
+          <div>
+            <p class="eyebrow">Daily Review</p>
+            <h2>Trading Scorecard</h2>
+            <p>Built from your screenshot: preparation, execution, risk, and behavior penalties.</p>
+          </div>
+          <label class="review-date-field">
+            <span>Scorecard Date</span>
+            <input id="scorecardDate" type="date">
+          </label>
+          <div class="score-summary">
+            <span id="scoreSummaryPercent">0%</span>
+            <strong id="scoreSummaryGrade">No grade</strong>
+            <small id="scoreSummaryPoints">0 / 0 points</small>
+          </div>
+        </div>
+
+        <div class="scorecard-grid" id="scorecardGrid"></div>
+
+        <label class="daily-note-field">
+          <span>Daily Review Notes</span>
+          <textarea id="dailyReviewNote" rows="4" placeholder="Daily recap, key mistake, best execution, what to repeat tomorrow..."></textarea>
+        </label>
+
+        <div class="market-context-panel">
+          <div>
+            <h3>Market Context</h3>
+            <p>Feeds the probability reports.</p>
+          </div>
+          <div class="market-context-grid">
+            <label>
+              <span>Gap Direction</span>
+              <select id="contextGapDirection">
+                <option value="">None</option>
+                <option value="up">Gap Up</option>
+                <option value="down">Gap Down</option>
+              </select>
+            </label>
+            <label>
+              <span>Gap Filled?</span>
+              <select id="contextGapFilled">
+                <option value="">N/A</option>
+                <option value="yes">Filled</option>
+                <option value="no">Not Filled</option>
+              </select>
+            </label>
+            <label>
+              <span>Day Type</span>
+              <select id="contextDayType">
+                <option value="">Unmarked</option>
+                <option value="inside">Inside Day</option>
+                <option value="outside_bullish">Bullish Outside Day</option>
+                <option value="outside_bearish">Bearish Outside Day</option>
+              </select>
+            </label>
+            <label>
+              <span>Outside Reversed?</span>
+              <select id="contextOutsideReversed">
+                <option value="">N/A</option>
+                <option value="yes">Reversed</option>
+                <option value="no">Did Not Reverse</option>
+              </select>
+            </label>
+            <label>
+              <span>Opening Candle</span>
+              <select id="contextOpeningCandle">
+                <option value="">Unmarked</option>
+                <option value="green">Green Candle</option>
+                <option value="red">Red Candle</option>
+              </select>
+            </label>
+            <label>
+              <span>Day Color</span>
+              <select id="contextDayColor">
+                <option value="">Unmarked</option>
+                <option value="green">Green Day</option>
+                <option value="red">Red Day</option>
+              </select>
+            </label>
+            <label>
+              <span>High Made?</span>
+              <select id="contextHighMade">
+                <option value="">No</option>
+                <option value="yes">Yes</option>
+              </select>
+            </label>
+            <label>
+              <span>Low Made?</span>
+              <select id="contextLowMade">
+                <option value="">No</option>
+                <option value="yes">Yes</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <div class="scorecard-actions">
+          <button class="ghost-button" id="perfectScoreButton" type="button">Mark Perfect Day</button>
+          <button class="danger-button" id="resetScoreButton" type="button">Reset Scorecard</button>
+        </div>
+      </section>
+
+      <section class="screenshot-panel">
+        <div class="screenshot-copy">
+          <p class="eyebrow">Trade Screenshot</p>
+          <h2>Daily Chart Review</h2>
+          <p>Attach the screenshot for a specific trading day so your scorecard has visual context.</p>
+        </div>
+
+        <div class="screenshot-controls">
+          <label>
+            <span>Review Date</span>
+            <input id="screenshotDate" type="date">
+          </label>
+          <label class="file-picker">
+            <span>Screenshot</span>
+            <input id="screenshotInput" type="file" accept="image/*">
+          </label>
+          <button class="danger-button" id="clearScreenshotButton" type="button">Clear Image</button>
+        </div>
+
+        <figure class="screenshot-preview" id="screenshotPreview">
+          <img id="screenshotImage" alt="Trade screenshot preview">
+          <figcaption id="screenshotCaption">No screenshot saved for this day.</figcaption>
+        </figure>
+      </section>
+      </section>
+
+      <section class="app-section" data-section-panel="trades" id="trades">
+      <section class="workspace">
+        <form class="journal-form" id="tradeForm">
+          <div class="form-header">
+            <div>
+              <h2 id="formTitle">Log Futures Trade</h2>
+              <p>Point value updates from the selected contract.</p>
+            </div>
+            <button class="ghost-button hidden" id="cancelEditButton" type="button">Cancel</button>
+          </div>
+
+          <label>
+            <span>Date</span>
+            <input id="date" name="date" type="date" required>
+          </label>
+
+          <div class="field-grid">
+            <label>
+              <span>Contract</span>
+              <select id="symbol" name="symbol" required>
+                <option value="ES">ES - E-mini S&P 500</option>
+                <option value="MES">MES - Micro S&P 500</option>
+                <option value="NQ">NQ - E-mini Nasdaq</option>
+                <option value="MNQ">MNQ - Micro Nasdaq</option>
+                <option value="YM">YM - E-mini Dow</option>
+                <option value="RTY">RTY - Russell 2000</option>
+                <option value="CL">CL - Crude Oil</option>
+                <option value="GC">GC - Gold</option>
+              </select>
+            </label>
+            <label>
+              <span>Side</span>
+              <select id="side" name="side">
+                <option value="Long">Long</option>
+                <option value="Short">Short</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="field-grid">
+            <label>
+              <span>Entry Price</span>
+              <input id="entry" name="entry" type="number" min="0" step="0.01" placeholder="5320.25" required>
+            </label>
+            <label>
+              <span>Exit Price</span>
+              <input id="exit" name="exit" type="number" min="0" step="0.01" placeholder="5331.00" required>
+            </label>
+          </div>
+
+          <div class="field-grid">
+            <label>
+              <span>Contracts</span>
+              <input id="quantity" name="quantity" type="number" min="1" step="1" placeholder="2" required>
+            </label>
+            <label>
+              <span>Point Value</span>
+              <input id="pointValue" name="pointValue" type="number" min="0" step="0.01" required>
+            </label>
+          </div>
+
+          <div class="field-grid">
+            <label>
+              <span>Commissions</span>
+              <input id="commission" name="commission" type="number" min="0" step="0.01" placeholder="9.60">
+            </label>
+            <label>
+              <span>Risk $</span>
+              <input id="risk" name="risk" type="number" min="0" step="0.01" placeholder="250">
+            </label>
+          </div>
+
+          <div class="field-grid">
+            <label>
+              <span>Setup</span>
+              <input id="setup" name="setup" type="text" placeholder="ORB, VWAP reclaim, trend pullback">
+            </label>
+            <label>
+              <span>Mood</span>
+              <select id="mood" name="mood">
+                <option value="Focused">Focused</option>
+                <option value="Calm">Calm</option>
+                <option value="Patient">Patient</option>
+                <option value="Rushed">Rushed</option>
+                <option value="Tilted">Tilted</option>
+              </select>
+            </label>
+          </div>
+
+          <label>
+            <span>Review Notes</span>
+            <textarea id="notes" name="notes" rows="5" placeholder="Plan, execution, screenshots link, rule followed or broken..."></textarea>
+          </label>
+
+          <button class="primary-button" type="submit">Save Trade</button>
+        </form>
+
+        <section class="journal-panel">
+          <div class="panel-toolbar">
+            <div>
+              <h2>Trades</h2>
+              <p id="resultCount">No trades yet</p>
+            </div>
+            <div class="filters">
+              <input id="searchInput" type="search" placeholder="Search contract, setup, notes">
+              <select id="outcomeFilter">
+                <option value="all">All outcomes</option>
+                <option value="wins">Wins</option>
+                <option value="losses">Losses</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Contract</th>
+                  <th>Side</th>
+                  <th>Size</th>
+                  <th>Points</th>
+                  <th>Net P/L</th>
+                  <th>R</th>
+                  <th>Setup</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="tradeRows"></tbody>
+            </table>
+          </div>
+
+          <div class="empty-state" id="emptyState">
+            <h3>No trades recorded</h3>
+            <p>Add your first futures trade or load samples to see the dashboard come alive.</p>
+          </div>
+        </section>
+      </section>
+      </section>
+
+      <section class="app-section" data-section-panel="playbook" id="playbook">
+        <section class="section-header-panel">
+          <div>
+            <p class="eyebrow">Playbook</p>
+            <h2>Setup Performance</h2>
+            <p>Track which setups actually deserve more size and attention.</p>
+          </div>
+        </section>
+        <div class="analysis-grid" id="playbookGrid"></div>
+      </section>
+
+      <section class="app-section" data-section-panel="reports" id="reports">
+        <section class="section-header-panel">
+          <div>
+            <p class="eyebrow">Reports</p>
+            <h2>Trading Reports</h2>
+            <p>Monthly and behavioral summaries from the trades currently saved in the journal.</p>
+          </div>
+        </section>
+        <div class="analysis-grid" id="reportsGrid"></div>
+      </section>
+
+      <section class="app-section" data-section-panel="probabilities" id="probabilities">
+        <section class="section-header-panel probability-header">
+          <div>
+            <p class="eyebrow">Conditional Probabilities</p>
+            <h2>What Happens When...</h2>
+            <p>Compare win rate, expectancy, and profit factor under different trade conditions.</p>
+          </div>
+          <label>
+            <span>Condition</span>
+            <select id="probabilityDimension">
+              <option value="setup">Setup</option>
+              <option value="symbol">Contract</option>
+              <option value="side">Side</option>
+              <option value="weekday">Weekday</option>
+              <option value="score">Scorecard Band</option>
+              <option value="screenshot">Screenshot Attached</option>
+            </select>
+          </label>
+        </section>
+
+        <section class="probability-panel">
+          <div class="probability-chart-grid" id="probabilityChartGrid"></div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Condition</th>
+                  <th>Trades</th>
+                  <th>Win Rate</th>
+                  <th>Expectancy</th>
+                  <th>Profit Factor</th>
+                  <th>Net P&L</th>
+                  <th>Best</th>
+                  <th>Worst</th>
+                </tr>
+              </thead>
+              <tbody id="probabilityRows"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <template id="rowTemplate">
+    <tr>
+      <td data-label="Date" class="date-cell"></td>
+      <td data-label="Contract" class="symbol-cell"></td>
+      <td data-label="Side" class="side-cell"></td>
+      <td data-label="Size" class="quantity-cell"></td>
+      <td data-label="Points" class="points-cell"></td>
+      <td data-label="Net P/L" class="pl-cell"></td>
+      <td data-label="R" class="r-cell"></td>
+      <td data-label="Setup" class="setup-cell"></td>
+      <td class="actions-cell">
+        <button class="icon-button edit-button" type="button" aria-label="Edit trade">Edit</button>
+        <button class="icon-button delete-button" type="button" aria-label="Delete trade">Delete</button>
+      </td>
+    </tr>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
