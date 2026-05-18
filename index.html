@@ -293,6 +293,28 @@
 
       <section class="app-section" data-section-panel="trades" id="trades">
       <section class="workspace">
+        <div class="trade-entry-column">
+        <section class="csv-import-panel">
+          <div class="form-header">
+            <div>
+              <h2>Import CSV</h2>
+              <p>Upload exported fills or closed trades from your broker.</p>
+            </div>
+          </div>
+
+          <label class="file-picker compact-file-picker">
+            <span>CSV File</span>
+            <input id="csvInput" type="file" accept=".csv,text/csv">
+          </label>
+
+          <div class="csv-hints">
+            <span>Auto-detects date, symbol, side, entry, exit, qty, P&L, fees, setup, and notes.</span>
+            <span>Repeat uploads skip rows already imported.</span>
+          </div>
+
+          <p class="import-status" id="csvImportStatus">No CSV imported yet.</p>
+        </section>
+
         <form class="journal-form" id="tradeForm">
           <div class="form-header">
             <div>
@@ -387,6 +409,7 @@
 
           <button class="primary-button" type="submit">Save Trade</button>
         </form>
+        </div>
 
         <section class="journal-panel">
           <div class="panel-toolbar">

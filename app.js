@@ -22,6 +22,8 @@ const emptyState = document.querySelector("#emptyState");
 const resultCount = document.querySelector("#resultCount");
 const searchInput = document.querySelector("#searchInput");
 const outcomeFilter = document.querySelector("#outcomeFilter");
+const csvInput = document.querySelector("#csvInput");
+const csvImportStatus = document.querySelector("#csvImportStatus");
 const seedButton = document.querySelector("#seedButton");
 const clearButton = document.querySelector("#clearButton");
 const logoutButton = document.querySelector("#logoutButton");
@@ -310,6 +312,7 @@ symbolInput.addEventListener("change", syncPointValue);
 cancelEditButton.addEventListener("click", resetForm);
 searchInput.addEventListener("input", render);
 outcomeFilter.addEventListener("change", render);
+csvInput.addEventListener("change", importCsvTrades);
 perfectScoreButton.addEventListener("click", markPerfectScorecard);
 resetScoreButton.addEventListener("click", resetScorecard);
 scorecardDate.addEventListener("change", () => {
@@ -721,6 +724,197 @@ function tradeFromForm(data) {
     profitLoss,
     rMultiple,
   };
+}
+
+async function importCsvTrades(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  csvImportStatus.textContent = `Reading ${file.name}...`;
+
+  try {
+    const text = await file.text();
+    const { headers, rows } = parseCsv(text);
+
+    if (!headers.length || !rows.length) {
+      csvImportStatus.textContent = "That CSV looks empty. Check the export and try again.";
+      return;
+    }
+
+    const before = trades.length;
+    const knownIds = new Set(trades.map((trade) => trade.sourceId || trade.id));
+    const imported = [];
+    let skipped = 0;
+
+    rows.forEach((row) => {
+      const trade = tradeFromCsvRow(row, headers);
+      if (!trade) {
+        skipped += 1;
+        return;
+      }
+
+      if (knownIds.has(trade.sourceId)) {
+        skipped += 1;
+        return;
+      }
+
+      knownIds.add(trade.sourceId);
+      imported.push(trade);
+    });
+
+    if (imported.length) {
+      trades = [...imported, ...trades];
+      saveTrades();
+      render();
+    }
+
+    csvImportStatus.textContent = `Imported ${imported.length} trade${imported.length === 1 ? "" : "s"}. Skipped ${skipped}. Journal total: ${before + imported.length}.`;
+  } catch (error) {
+    csvImportStatus.textContent = `Import failed: ${error.message}`;
+  } finally {
+    event.target.value = "";
+  }
+}
+
+function parseCsv(text) {
+  const rows = [];
+  let row = [];
+  let cell = "";
+  let inQuotes = false;
+  const cleanText = text.replace(/^\uFEFF/, "");
+
+  for (let index = 0; index < cleanText.length; index += 1) {
+    const char = cleanText[index];
+    const next = cleanText[index + 1];
+
+    if (char === '"' && inQuotes && next === '"') {
+      cell += '"';
+      index += 1;
+    } else if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === "," && !inQuotes) {
+      row.push(cell.trim());
+      cell = "";
+    } else if ((char === "\n" || char === "\r") && !inQuotes) {
+      if (char === "\r" && next === "\n") index += 1;
+      row.push(cell.trim());
+      if (row.some((value) => value !== "")) rows.push(row);
+      row = [];
+      cell = "";
+    } else {
+      cell += char;
+    }
+  }
+
+  row.push(cell.trim());
+  if (row.some((value) => value !== "")) rows.push(row);
+
+  const headers = rows.shift()?.map(normalizeHeader) ?? [];
+  const dataRows = rows.map((values) => Object.fromEntries(headers.map((header, index) => [header, values[index] ?? ""])));
+  return { headers, rows: dataRows };
+}
+
+function tradeFromCsvRow(row, headers) {
+  const date = normalizeCsvDate(readCsvValue(row, headers, ["date", "trade date", "close date", "closed date", "closing date", "timestamp", "time", "exit time", "filled time"]));
+  const symbol = normalizeCsvSymbol(readCsvValue(row, headers, ["symbol", "contract", "instrument", "product", "market", "ticker"]));
+  const side = normalizeCsvSide(readCsvValue(row, headers, ["side", "buy sell", "buy/sell", "direction", "position", "action"]));
+  const entry = parseCsvNumber(readCsvValue(row, headers, ["entry", "entry price", "avg entry", "avg entry price", "price in", "open price"]));
+  const exit = parseCsvNumber(readCsvValue(row, headers, ["exit", "exit price", "avg exit", "avg exit price", "price out", "close price", "fill price"]));
+  const quantity = Math.max(1, Math.abs(parseCsvNumber(readCsvValue(row, headers, ["qty", "quantity", "contracts", "size", "filled qty", "filled quantity"])) || 1));
+  const commission = Math.abs(parseCsvNumber(readCsvValue(row, headers, ["commission", "commissions", "fees", "fee", "total fees"])) || 0);
+  const importedPnl = parseCsvNumber(readCsvValue(row, headers, ["pnl", "p&l", "net pnl", "net p&l", "realized pnl", "realized p&l", "profit loss", "profit/loss", "pl"]));
+  const setup = readCsvValue(row, headers, ["setup", "strategy", "tag", "tags", "playbook"]) || "CSV Import";
+  const notes = readCsvValue(row, headers, ["notes", "note", "comments", "comment", "description"]) || "";
+
+  if (!date || !symbol) return null;
+
+  const pointValue = CONTRACTS[symbol]?.pointValue ?? 1;
+  const direction = side === "Long" ? 1 : -1;
+  const points = entry && exit ? (exit - entry) * direction : 0;
+  const grossProfitLoss = Number.isFinite(importedPnl) ? importedPnl : points * pointValue * quantity;
+  const profitLoss = Number.isFinite(importedPnl) ? importedPnl : grossProfitLoss - commission;
+  const sourceBase = [date, symbol, side, entry, exit, quantity, profitLoss, setup, notes].join("|");
+
+  return {
+    id: crypto.randomUUID(),
+    source: "csv",
+    sourceId: `csv-${hashText(sourceBase)}`,
+    date,
+    symbol,
+    contractName: CONTRACTS[symbol]?.name ?? symbol,
+    side,
+    setup: setup.trim() || "CSV Import",
+    mood: "Imported",
+    entry,
+    exit,
+    quantity,
+    pointValue,
+    commission,
+    risk: 0,
+    notes: notes.trim(),
+    points,
+    grossProfitLoss,
+    profitLoss,
+    rMultiple: 0,
+  };
+}
+
+function readCsvValue(row, headers, aliases) {
+  const normalizedAliases = aliases.map(normalizeHeader);
+  const key = headers.find((header) => normalizedAliases.includes(header));
+  return key ? row[key]?.trim() ?? "" : "";
+}
+
+function normalizeHeader(value) {
+  return String(value).trim().toLowerCase().replace(/[$]/g, "").replace(/[^a-z0-9&/]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function normalizeCsvDate(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+
+  const isoMatch = raw.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (isoMatch) return [isoMatch[1], isoMatch[2].padStart(2, "0"), isoMatch[3].padStart(2, "0")].join("-");
+
+  const usMatch = raw.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})/);
+  if (usMatch) {
+    const year = usMatch[3].length === 2 ? `20${usMatch[3]}` : usMatch[3];
+    return [year, usMatch[1].padStart(2, "0"), usMatch[2].padStart(2, "0")].join("-");
+  }
+
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? "" : formatDateKey(parsed);
+}
+
+function normalizeCsvSymbol(value) {
+  const raw = String(value || "").toUpperCase().replace(/[^A-Z]/g, "");
+  const symbols = Object.keys(CONTRACTS).sort((a, b) => b.length - a.length);
+  return symbols.find((symbol) => raw.startsWith(symbol) || raw.includes(symbol)) || raw.slice(0, 6);
+}
+
+function normalizeCsvSide(value) {
+  const raw = String(value || "").toLowerCase();
+  if (raw.includes("short") || raw.includes("sell")) return "Short";
+  return "Long";
+}
+
+function parseCsvNumber(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return NaN;
+
+  const isParenthesesNegative = /^\(.*\)$/.test(raw);
+  const cleaned = raw.replace(/[,$%]/g, "").replace(/[()]/g, "").replace(/[^0-9.-]/g, "");
+  const number = Number(cleaned);
+  if (!Number.isFinite(number)) return NaN;
+  return isParenthesesNegative ? -Math.abs(number) : number;
+}
+
+function hashText(value) {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = ((hash << 5) - hash + value.charCodeAt(index)) | 0;
+  }
+  return Math.abs(hash).toString(36);
 }
 
 function filteredTrades() {
