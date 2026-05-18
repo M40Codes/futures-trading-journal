@@ -828,11 +828,14 @@ function tradeFromCsvRow(row, headers) {
   const importedPnl = parseCsvNumber(readCsvValue(row, headers, ["pnl", "p&l", "net pnl", "net p&l", "realized pnl", "realized p&l", "profit loss", "profit/loss", "pl", "net profit", "gross pnl", "gross p&l"]));
   const buyPrice = parseCsvNumber(readCsvValue(row, headers, ["buy price", "buyprice", "average buy price", "avg buy", "buy avg price"]));
   const sellPrice = parseCsvNumber(readCsvValue(row, headers, ["sell price", "sellprice", "average sell price", "avg sell", "sell avg price"]));
+  const boughtTime = readCsvValue(row, headers, ["bought time", "boughttime", "buy time", "buytime"]);
+  const soldTime = readCsvValue(row, headers, ["sold time", "soldtime", "sell time", "selltime"]);
   const side = normalizeCsvSide(
     readCsvValue(row, headers, ["side", "buy sell", "buy/sell", "b/s", "bs", "direction", "position", "action", "trade side", "order side"]),
     buyPrice,
     sellPrice,
-    importedPnl,
+    boughtTime,
+    soldTime,
   );
   const rawEntry = parseCsvNumber(readCsvValue(row, headers, ["entry", "entry price", "entryprice", "avg entry", "avg entry price", "avgentryprice", "price in", "pricein", "open price", "openprice", "entry avg price"]));
   const rawExit = parseCsvNumber(readCsvValue(row, headers, ["exit", "exit price", "exitprice", "avg exit", "avg exit price", "avgexitprice", "price out", "priceout", "close price", "closeprice", "exit avg price", "fill price"]));
@@ -849,8 +852,10 @@ function tradeFromCsvRow(row, headers) {
   const pointValue = CONTRACTS[symbol]?.pointValue ?? 1;
   const direction = side === "Long" ? 1 : -1;
   const points = entry && exit ? (exit - entry) * direction : 0;
-  const grossProfitLoss = Number.isFinite(importedPnl) ? importedPnl : points * pointValue * quantity;
-  const profitLoss = Number.isFinite(importedPnl) ? importedPnl : grossProfitLoss - commission;
+  const calculatedGross = points * pointValue * quantity;
+  const signedImportedPnl = signedCsvPnl(importedPnl, calculatedGross);
+  const grossProfitLoss = Number.isFinite(signedImportedPnl) ? signedImportedPnl : calculatedGross;
+  const profitLoss = Number.isFinite(signedImportedPnl) ? signedImportedPnl : grossProfitLoss - commission;
   const sourceBase = [date, symbol, side, entry, exit, quantity, profitLoss, setup, notes].join("|");
 
   return {
@@ -945,16 +950,38 @@ function normalizeCsvSymbol(value) {
   return symbols.find((symbol) => raw.startsWith(symbol) || raw.includes(symbol)) || raw.slice(0, 6);
 }
 
-function normalizeCsvSide(value, buyPrice = NaN, sellPrice = NaN, pnl = NaN) {
+function normalizeCsvSide(value, buyPrice = NaN, sellPrice = NaN, boughtTime = "", soldTime = "") {
   const raw = String(value || "").toLowerCase();
   if (raw.includes("short") || raw.includes("sell")) return "Short";
   if (raw.includes("long") || raw.includes("buy")) return "Long";
-  if (Number.isFinite(buyPrice) && Number.isFinite(sellPrice) && Number.isFinite(pnl)) {
-    const longResult = sellPrice - buyPrice;
-    if ((pnl >= 0 && longResult >= 0) || (pnl < 0 && longResult < 0)) return "Long";
-    return "Short";
+
+  const bought = parseCsvDateTime(boughtTime);
+  const sold = parseCsvDateTime(soldTime);
+  if (bought && sold) {
+    return sold < bought ? "Short" : "Long";
   }
+
+  if (Number.isFinite(buyPrice) && Number.isFinite(sellPrice)) return "Long";
   return "Long";
+}
+
+function signedCsvPnl(importedPnl, calculatedGross) {
+  if (!Number.isFinite(importedPnl)) return NaN;
+  if (!Number.isFinite(calculatedGross) || calculatedGross === 0) return importedPnl;
+  return Math.abs(importedPnl) * Math.sign(calculatedGross);
+}
+
+function parseCsvDateTime(value) {
+  const raw = String(value || "").trim();
+  if (!raw || raw.includes("#")) return null;
+
+  const excelSerial = Number(raw);
+  if (Number.isFinite(excelSerial) && excelSerial > 20000) {
+    return new Date(Math.round((excelSerial - 25569) * 86400 * 1000));
+  }
+
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
 function parseCsvNumber(value) {
