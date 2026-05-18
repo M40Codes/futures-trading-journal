@@ -823,7 +823,8 @@ function parseCsv(text) {
 }
 
 function tradeFromCsvRow(row, headers) {
-  const date = normalizeCsvDate(readCsvValue(row, headers, ["date", "trade date", "close date", "closed date", "closing date", "open date", "entry date", "exit date", "timestamp", "time", "open time", "close time", "entry time", "exit time", "bought time", "boughttime", "sold time", "soldtime", "filled time", "fill time", "filled at", "created at", "execution time", "transaction date"])) || todayKey();
+  const rawDate = readCsvValue(row, headers, ["date", "trade date", "close date", "closed date", "closing date", "open date", "entry date", "exit date", "timestamp", "time", "open time", "close time", "entry time", "exit time", "bought time", "boughttime", "sold time", "soldtime", "filled time", "fill time", "filled at", "created at", "execution time", "transaction date"]);
+  const date = normalizeCsvDate(rawDate);
   const symbol = normalizeCsvSymbol(readCsvValue(row, headers, ["symbol", "contract", "instrument", "product", "market", "ticker", "name", "root", "underlying", "security", "security id"]));
   const importedPnl = parseCsvNumber(readCsvValue(row, headers, ["pnl", "p&l", "net pnl", "net p&l", "realized pnl", "realized p&l", "profit loss", "profit/loss", "pl", "net profit", "gross pnl", "gross p&l"]));
   const buyPrice = parseCsvNumber(readCsvValue(row, headers, ["buy price", "buyprice", "average buy price", "avg buy", "buy avg price"]));
@@ -929,7 +930,10 @@ function normalizeHeader(value) {
 
 function normalizeCsvDate(value) {
   const raw = String(value || "").trim();
-  if (!raw) return "";
+  if (!raw || raw.includes("#")) return "";
+
+  const parsedDateTime = parseCsvDateTime(raw);
+  if (parsedDateTime) return formatDateKey(parsedDateTime);
 
   const isoMatch = raw.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
   if (isoMatch) return [isoMatch[1], isoMatch[2].padStart(2, "0"), isoMatch[3].padStart(2, "0")].join("-");
@@ -975,9 +979,13 @@ function parseCsvDateTime(value) {
   const raw = String(value || "").trim();
   if (!raw || raw.includes("#")) return null;
 
-  const excelSerial = Number(raw);
-  if (Number.isFinite(excelSerial) && excelSerial > 20000) {
-    return new Date(Math.round((excelSerial - 25569) * 86400 * 1000));
+  const numericValue = Number(raw);
+  if (Number.isFinite(numericValue)) {
+    if (numericValue > 100000000000) return new Date(numericValue);
+    if (numericValue > 1000000000) return new Date(numericValue * 1000);
+    if (numericValue > 20000 && numericValue < 100000) {
+      return new Date(Math.round((numericValue - 25569) * 86400 * 1000));
+    }
   }
 
   const parsed = new Date(raw);
