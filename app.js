@@ -734,7 +734,7 @@ async function importCsvTrades(event) {
 
   try {
     const text = await file.text();
-    const { headers, rows } = parseCsv(text);
+    const { headers, rawHeaders, rows } = parseCsv(text);
 
     if (!headers.length || !rows.length) {
       csvImportStatus.textContent = "That CSV looks empty. Check the export and try again.";
@@ -768,6 +768,12 @@ async function importCsvTrades(event) {
       render();
     }
 
+    if (!imported.length) {
+      const detectedColumns = rawHeaders.slice(0, 10).join(", ") || "none";
+      csvImportStatus.textContent = `Imported 0 trades. I could not find a valid date and symbol/contract in the rows. Detected columns: ${detectedColumns}.`;
+      return;
+    }
+
     csvImportStatus.textContent = `Imported ${imported.length} trade${imported.length === 1 ? "" : "s"}. Skipped ${skipped}. Journal total: ${before + imported.length}.`;
   } catch (error) {
     csvImportStatus.textContent = `Import failed: ${error.message}`;
@@ -782,6 +788,7 @@ function parseCsv(text) {
   let cell = "";
   let inQuotes = false;
   const cleanText = text.replace(/^\uFEFF/, "");
+  const delimiter = detectCsvDelimiter(cleanText);
 
   for (let index = 0; index < cleanText.length; index += 1) {
     const char = cleanText[index];
@@ -792,7 +799,7 @@ function parseCsv(text) {
       index += 1;
     } else if (char === '"') {
       inQuotes = !inQuotes;
-    } else if (char === "," && !inQuotes) {
+    } else if (char === delimiter && !inQuotes) {
       row.push(cell.trim());
       cell = "";
     } else if ((char === "\n" || char === "\r") && !inQuotes) {
@@ -809,22 +816,33 @@ function parseCsv(text) {
   row.push(cell.trim());
   if (row.some((value) => value !== "")) rows.push(row);
 
-  const headers = rows.shift()?.map(normalizeHeader) ?? [];
+  const rawHeaders = rows.shift() ?? [];
+  const headers = rawHeaders.map(normalizeHeader);
   const dataRows = rows.map((values) => Object.fromEntries(headers.map((header, index) => [header, values[index] ?? ""])));
-  return { headers, rows: dataRows };
+  return { headers, rawHeaders, rows: dataRows };
 }
 
 function tradeFromCsvRow(row, headers) {
-  const date = normalizeCsvDate(readCsvValue(row, headers, ["date", "trade date", "close date", "closed date", "closing date", "timestamp", "time", "exit time", "filled time"]));
-  const symbol = normalizeCsvSymbol(readCsvValue(row, headers, ["symbol", "contract", "instrument", "product", "market", "ticker"]));
-  const side = normalizeCsvSide(readCsvValue(row, headers, ["side", "buy sell", "buy/sell", "direction", "position", "action"]));
-  const entry = parseCsvNumber(readCsvValue(row, headers, ["entry", "entry price", "avg entry", "avg entry price", "price in", "open price"]));
-  const exit = parseCsvNumber(readCsvValue(row, headers, ["exit", "exit price", "avg exit", "avg exit price", "price out", "close price", "fill price"]));
-  const quantity = Math.max(1, Math.abs(parseCsvNumber(readCsvValue(row, headers, ["qty", "quantity", "contracts", "size", "filled qty", "filled quantity"])) || 1));
-  const commission = Math.abs(parseCsvNumber(readCsvValue(row, headers, ["commission", "commissions", "fees", "fee", "total fees"])) || 0);
-  const importedPnl = parseCsvNumber(readCsvValue(row, headers, ["pnl", "p&l", "net pnl", "net p&l", "realized pnl", "realized p&l", "profit loss", "profit/loss", "pl"]));
-  const setup = readCsvValue(row, headers, ["setup", "strategy", "tag", "tags", "playbook"]) || "CSV Import";
-  const notes = readCsvValue(row, headers, ["notes", "note", "comments", "comment", "description"]) || "";
+  const date = normalizeCsvDate(readCsvValue(row, headers, ["date", "trade date", "close date", "closed date", "closing date", "open date", "entry date", "exit date", "timestamp", "time", "open time", "close time", "entry time", "exit time", "bought time", "boughttime", "sold time", "soldtime", "filled time", "fill time", "filled at", "created at", "execution time", "transaction date"])) || todayKey();
+  const symbol = normalizeCsvSymbol(readCsvValue(row, headers, ["symbol", "contract", "instrument", "product", "market", "ticker", "name", "root", "underlying", "security", "security id"]));
+  const importedPnl = parseCsvNumber(readCsvValue(row, headers, ["pnl", "p&l", "net pnl", "net p&l", "realized pnl", "realized p&l", "profit loss", "profit/loss", "pl", "net profit", "gross pnl", "gross p&l"]));
+  const buyPrice = parseCsvNumber(readCsvValue(row, headers, ["buy price", "buyprice", "average buy price", "avg buy", "buy avg price"]));
+  const sellPrice = parseCsvNumber(readCsvValue(row, headers, ["sell price", "sellprice", "average sell price", "avg sell", "sell avg price"]));
+  const side = normalizeCsvSide(
+    readCsvValue(row, headers, ["side", "buy sell", "buy/sell", "b/s", "bs", "direction", "position", "action", "trade side", "order side"]),
+    buyPrice,
+    sellPrice,
+    importedPnl,
+  );
+  const rawEntry = parseCsvNumber(readCsvValue(row, headers, ["entry", "entry price", "entryprice", "avg entry", "avg entry price", "avgentryprice", "price in", "pricein", "open price", "openprice", "entry avg price"]));
+  const rawExit = parseCsvNumber(readCsvValue(row, headers, ["exit", "exit price", "exitprice", "avg exit", "avg exit price", "avgexitprice", "price out", "priceout", "close price", "closeprice", "exit avg price", "fill price"]));
+  const entry = Number.isFinite(rawEntry) ? rawEntry : side === "Short" ? sellPrice : buyPrice;
+  const exit = Number.isFinite(rawExit) ? rawExit : side === "Short" ? buyPrice : sellPrice;
+  const quantity = Math.max(1, Math.abs(parseCsvNumber(readCsvValue(row, headers, ["qty", "quantity", "contracts", "size", "filled qty", "filled quantity", "position size", "total qty", "total quantity"])) || 1));
+  const commission = Math.abs(parseCsvNumber(readCsvValue(row, headers, ["commission", "commissions", "fees", "fee", "total fees", "total fee", "exchange fees", "clearing fees"])) || 0);
+  const setup = readCsvValue(row, headers, ["setup", "strategy", "tag", "tags", "playbook", "mistake", "mistakes"]) || "CSV Import";
+  const duration = readCsvValue(row, headers, ["duration", "holding time", "time in trade"]);
+  const notes = readCsvValue(row, headers, ["notes", "note", "comments", "comment", "description", "review", "reason"]) || (duration ? `Duration: ${duration}` : "");
 
   if (!date || !symbol) return null;
 
@@ -865,8 +883,43 @@ function readCsvValue(row, headers, aliases) {
   return key ? row[key]?.trim() ?? "" : "";
 }
 
+function detectCsvDelimiter(text) {
+  const firstLine = text.split(/\r?\n/).find((line) => line.trim()) || "";
+  const candidates = [",", "\t", ";", "|"];
+  return candidates
+    .map((delimiter) => ({ delimiter, count: countDelimiter(firstLine, delimiter) }))
+    .sort((a, b) => b.count - a.count)[0]?.delimiter || ",";
+}
+
+function countDelimiter(line, delimiter) {
+  let count = 0;
+  let inQuotes = false;
+
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index];
+    const next = line[index + 1];
+
+    if (char === '"' && inQuotes && next === '"') {
+      index += 1;
+    } else if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === delimiter && !inQuotes) {
+      count += 1;
+    }
+  }
+
+  return count;
+}
+
 function normalizeHeader(value) {
-  return String(value).trim().toLowerCase().replace(/[$]/g, "").replace(/[^a-z0-9&/]+/g, " ").replace(/\s+/g, " ").trim();
+  return String(value)
+    .trim()
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .toLowerCase()
+    .replace(/[$]/g, "")
+    .replace(/[^a-z0-9&/]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function normalizeCsvDate(value) {
@@ -892,9 +945,15 @@ function normalizeCsvSymbol(value) {
   return symbols.find((symbol) => raw.startsWith(symbol) || raw.includes(symbol)) || raw.slice(0, 6);
 }
 
-function normalizeCsvSide(value) {
+function normalizeCsvSide(value, buyPrice = NaN, sellPrice = NaN, pnl = NaN) {
   const raw = String(value || "").toLowerCase();
   if (raw.includes("short") || raw.includes("sell")) return "Short";
+  if (raw.includes("long") || raw.includes("buy")) return "Long";
+  if (Number.isFinite(buyPrice) && Number.isFinite(sellPrice) && Number.isFinite(pnl)) {
+    const longResult = sellPrice - buyPrice;
+    if ((pnl >= 0 && longResult >= 0) || (pnl < 0 && longResult < 0)) return "Long";
+    return "Short";
+  }
   return "Long";
 }
 
