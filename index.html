@@ -20,6 +20,7 @@
         <a href="#reports" data-section="reports">Reports</a>
         <a href="#probabilities" data-section="probabilities">Probabilities</a>
         <a href="#stats-matrix" data-section="stats-matrix">Stats Matrix</a>
+        <a href="#trade-plan" data-section="trade-plan">Trade Plan</a>
       </nav>
     </aside>
 
@@ -544,7 +545,100 @@
 
         <section class="stats-matrix-panel">
           <div class="matrix-summary" id="matrixSummary">Enter current price and levels to highlight the closest market reference.</div>
+          <div class="in-play-panel">
+            <div>
+              <h3>What's In Play</h3>
+              <p>Nearest live references and their historical probabilities from the matrix.</p>
+            </div>
+            <div class="in-play-grid" id="inPlayGrid"></div>
+          </div>
           <div class="matrix-scroll" id="statsMatrix"></div>
+        </section>
+      </section>
+
+      <section class="app-section" data-section-panel="trade-plan" id="trade-plan">
+        <section class="section-header-panel">
+          <div>
+            <p class="eyebrow">Pre-Open</p>
+            <h2>Trade Plan Builder</h2>
+            <p>Create the game plan before the market opens, then review execution after the session.</p>
+          </div>
+          <label>
+            <span>Plan Date</span>
+            <input id="planDate" type="date">
+          </label>
+        </section>
+
+        <section class="trade-plan-panel">
+          <div class="plan-grid">
+            <label>
+              <span>Market Bias</span>
+              <select id="planBias">
+                <option value="">Unclear</option>
+                <option value="Bullish">Bullish</option>
+                <option value="Bearish">Bearish</option>
+                <option value="Balanced">Balanced</option>
+                <option value="Wait-and-see">Wait-and-see</option>
+              </select>
+            </label>
+            <label>
+              <span>Max Trades</span>
+              <input id="planMaxTrades" type="number" min="0" step="1" placeholder="3">
+            </label>
+            <label>
+              <span>Max Daily Loss</span>
+              <input id="planMaxLoss" type="number" min="0" step="1" placeholder="500">
+            </label>
+            <label>
+              <span>Target Day Type</span>
+              <select id="planDayType">
+                <option value="">Unmarked</option>
+                <option value="Trend day">Trend day</option>
+                <option value="Range day">Range day</option>
+                <option value="Gap fill">Gap fill</option>
+                <option value="Outside day">Outside day</option>
+                <option value="Inside day">Inside day</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="plan-grid wide-plan-grid">
+            <label>
+              <span>News / Calendar</span>
+              <textarea id="planNews" rows="4" placeholder="CPI, FOMC, JOLTS, Fed speakers, auction times..."></textarea>
+            </label>
+            <label>
+              <span>Key Levels</span>
+              <textarea id="planLevels" rows="4" placeholder="ONH, ONL, pVAH, pVAL, pPOC, IBH, IBL, liquidity zones..."></textarea>
+            </label>
+          </div>
+
+          <div class="scenario-grid">
+            <label>
+              <span>If Bullish</span>
+              <textarea id="planBullish" rows="5" placeholder="If price reclaims ___ and holds, then I look for long entry at ___ with invalidation at ___."></textarea>
+            </label>
+            <label>
+              <span>If Bearish</span>
+              <textarea id="planBearish" rows="5" placeholder="If price rejects ___ and breaks ___, then I look for short entry at ___ with invalidation at ___."></textarea>
+            </label>
+            <label>
+              <span>If Range / No Trade</span>
+              <textarea id="planNeutral" rows="5" placeholder="If price chops between ___ and ___, then I wait. No trade unless ___."></textarea>
+            </label>
+          </div>
+
+          <div class="plan-checklist">
+            <label><input id="planChecklistNews" type="checkbox"> News checked</label>
+            <label><input id="planChecklistLevels" type="checkbox"> Levels marked</label>
+            <label><input id="planChecklistRisk" type="checkbox"> Risk defined</label>
+            <label><input id="planChecklistNoChase" type="checkbox"> No-chase rule accepted</label>
+          </div>
+
+          <div class="scorecard-actions">
+            <button class="primary-button" id="savePlanButton" type="button">Save Game Plan</button>
+            <button class="danger-button" id="clearPlanButton" type="button">Clear Plan</button>
+          </div>
         </section>
       </section>
     </main>

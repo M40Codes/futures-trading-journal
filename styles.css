@@ -401,12 +401,58 @@ p {
 }
 
 .market-live-panel,
-.stats-matrix-panel {
+.stats-matrix-panel,
+.trade-plan-panel {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 18px;
   background: linear-gradient(180deg, rgba(17, 24, 39, 0.96), rgba(10, 16, 27, 0.96));
   box-shadow: var(--shadow);
+}
+
+.plan-grid,
+.scenario-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.plan-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.wide-plan-grid,
+.scenario-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 12px;
+}
+
+.scenario-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.plan-checklist {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.plan-checklist label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 12px;
+  background: #080d18;
+  color: var(--ink);
+}
+
+.plan-checklist input {
+  width: auto;
+  min-height: auto;
 }
 
 .market-live-panel {
@@ -429,6 +475,70 @@ p {
   color: #c7fff6;
   font-size: 0.9rem;
   font-weight: 900;
+}
+
+.in-play-panel {
+  margin-bottom: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  background: #080d18;
+}
+
+.in-play-panel h3 {
+  margin-bottom: 4px;
+}
+
+.in-play-panel p {
+  margin-bottom: 12px;
+}
+
+.in-play-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.in-play-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.in-play-card span,
+.in-play-card small,
+.in-play-card em {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.in-play-card h4 {
+  margin: 8px 0 10px;
+  font-size: 1rem;
+}
+
+.in-play-card strong {
+  display: block;
+  color: var(--accent);
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.in-play-card div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.primary-play {
+  border-color: rgba(45, 212, 191, 0.70);
+  box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.10);
 }
 
 .matrix-scroll {
@@ -1289,6 +1399,11 @@ td {
   .analysis-grid,
   .market-context-grid,
   .market-live-panel,
+  .in-play-grid,
+  .plan-grid,
+  .wide-plan-grid,
+  .scenario-grid,
+  .plan-checklist,
   .scorecard-grid,
   .screenshot-panel,
   .workspace {
@@ -1350,6 +1465,11 @@ td {
   .probability-chart-grid,
   .market-context-grid,
   .market-live-panel,
+  .in-play-grid,
+  .plan-grid,
+  .wide-plan-grid,
+  .scenario-grid,
+  .plan-checklist,
   .scorecard-grid,
   .screenshot-panel,
   .workspace,

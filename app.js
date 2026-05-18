@@ -58,6 +58,7 @@ const playbookGrid = document.querySelector("#playbookGrid");
 const reportsGrid = document.querySelector("#reportsGrid");
 const statsMatrix = document.querySelector("#statsMatrix");
 const matrixSummary = document.querySelector("#matrixSummary");
+const inPlayGrid = document.querySelector("#inPlayGrid");
 const liveLevelInputs = {
   current: document.querySelector("#liveCurrentPrice"),
   onh: document.querySelector("#liveOnh"),
@@ -69,6 +70,24 @@ const liveLevelInputs = {
   ibh: document.querySelector("#liveIbh"),
   ibl: document.querySelector("#liveIbl"),
 };
+const planInputs = {
+  date: document.querySelector("#planDate"),
+  bias: document.querySelector("#planBias"),
+  maxTrades: document.querySelector("#planMaxTrades"),
+  maxLoss: document.querySelector("#planMaxLoss"),
+  dayType: document.querySelector("#planDayType"),
+  news: document.querySelector("#planNews"),
+  levels: document.querySelector("#planLevels"),
+  bullish: document.querySelector("#planBullish"),
+  bearish: document.querySelector("#planBearish"),
+  neutral: document.querySelector("#planNeutral"),
+  checklistNews: document.querySelector("#planChecklistNews"),
+  checklistLevels: document.querySelector("#planChecklistLevels"),
+  checklistRisk: document.querySelector("#planChecklistRisk"),
+  checklistNoChase: document.querySelector("#planChecklistNoChase"),
+};
+const savePlanButton = document.querySelector("#savePlanButton");
+const clearPlanButton = document.querySelector("#clearPlanButton");
 const contextInputs = {
   gapDirection: document.querySelector("#contextGapDirection"),
   gapFilled: document.querySelector("#contextGapFilled"),
@@ -243,6 +262,7 @@ const STATS_MATRIX_SECTIONS = [
 let trades = loadTrades();
 let scorecards = loadScorecard();
 let screenshots = loadScreenshots();
+let tradePlans = loadTradePlans();
 let editingId = null;
 let calendarDate = new Date();
 let serverSyncReady = false;
@@ -262,9 +282,11 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
 document.querySelector("#date").valueAsDate = new Date();
 scorecardDate.valueAsDate = new Date();
 screenshotDate.valueAsDate = new Date();
+planInputs.date.valueAsDate = new Date();
 syncPointValue();
 renderScorecard();
 renderScreenshot();
+renderTradePlan();
 render();
 checkTradovateStatus();
 hydrateFromServer();
@@ -303,6 +325,14 @@ Object.values(contextInputs).forEach((input) => {
 Object.values(liveLevelInputs).forEach((input) => {
   input.addEventListener("input", renderStatsMatrix);
 });
+planInputs.date.addEventListener("change", renderTradePlan);
+Object.entries(planInputs).forEach(([key, input]) => {
+  if (key === "date") return;
+  input.addEventListener("input", saveTradePlan);
+  input.addEventListener("change", saveTradePlan);
+});
+savePlanButton.addEventListener("click", saveTradePlan);
+clearPlanButton.addEventListener("click", clearTradePlan);
 screenshotDate.addEventListener("change", () => {
   scorecardDate.value = screenshotDate.value;
   renderScorecard();
@@ -514,6 +544,19 @@ function saveScreenshots() {
   scheduleServerSave();
 }
 
+function loadTradePlans() {
+  try {
+    return JSON.parse(localStorage.getItem("futures-trade-plans:v1")) ?? {};
+  } catch {
+    return {};
+  }
+}
+
+function saveTradePlans() {
+  localStorage.setItem("futures-trade-plans:v1", JSON.stringify(tradePlans));
+  scheduleServerSave();
+}
+
 async function hydrateFromServer() {
   if (window.location.protocol === "file:") return;
 
@@ -535,9 +578,14 @@ async function hydrateFromServer() {
       screenshots = { ...screenshots, ...data.screenshots };
     }
 
+    if (data.tradePlans && Object.keys(data.tradePlans).length) {
+      tradePlans = { ...tradePlans, ...data.tradePlans };
+    }
+
     saveLocalOnly();
     renderScorecard();
     renderScreenshot();
+    renderTradePlan();
     render();
     scheduleServerSave();
   } catch {
@@ -549,6 +597,7 @@ function saveLocalOnly() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(trades));
   localStorage.setItem(SCORE_STORAGE_KEY, JSON.stringify(scorecards));
   localStorage.setItem(SCREENSHOT_STORAGE_KEY, JSON.stringify(screenshots));
+  localStorage.setItem("futures-trade-plans:v1", JSON.stringify(tradePlans));
 }
 
 function scheduleServerSave() {
@@ -562,7 +611,7 @@ async function saveJournalToServer() {
     await fetchJson("/api/journal", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ trades, scorecards, screenshots }),
+      body: JSON.stringify({ trades, scorecards, screenshots, tradePlans }),
     });
   } catch {
     serverSyncReady = false;
@@ -908,6 +957,53 @@ function saveMarketContext() {
   renderProbabilities(trades);
 }
 
+function selectedPlanDate() {
+  return planInputs.date.value || todayKey();
+}
+
+function renderTradePlan() {
+  const plan = tradePlans[selectedPlanDate()] ?? {};
+  planInputs.bias.value = plan.bias ?? "";
+  planInputs.maxTrades.value = plan.maxTrades ?? "";
+  planInputs.maxLoss.value = plan.maxLoss ?? "";
+  planInputs.dayType.value = plan.dayType ?? "";
+  planInputs.news.value = plan.news ?? "";
+  planInputs.levels.value = plan.levels ?? "";
+  planInputs.bullish.value = plan.bullish ?? "";
+  planInputs.bearish.value = plan.bearish ?? "";
+  planInputs.neutral.value = plan.neutral ?? "";
+  planInputs.checklistNews.checked = Boolean(plan.checklistNews);
+  planInputs.checklistLevels.checked = Boolean(plan.checklistLevels);
+  planInputs.checklistRisk.checked = Boolean(plan.checklistRisk);
+  planInputs.checklistNoChase.checked = Boolean(plan.checklistNoChase);
+}
+
+function saveTradePlan() {
+  tradePlans[selectedPlanDate()] = {
+    bias: planInputs.bias.value,
+    maxTrades: planInputs.maxTrades.value,
+    maxLoss: planInputs.maxLoss.value,
+    dayType: planInputs.dayType.value,
+    news: planInputs.news.value,
+    levels: planInputs.levels.value,
+    bullish: planInputs.bullish.value,
+    bearish: planInputs.bearish.value,
+    neutral: planInputs.neutral.value,
+    checklistNews: planInputs.checklistNews.checked,
+    checklistLevels: planInputs.checklistLevels.checked,
+    checklistRisk: planInputs.checklistRisk.checked,
+    checklistNoChase: planInputs.checklistNoChase.checked,
+    updatedAt: new Date().toISOString(),
+  };
+  saveTradePlans();
+}
+
+function clearTradePlan() {
+  delete tradePlans[selectedPlanDate()];
+  saveTradePlans();
+  renderTradePlan();
+}
+
 function renderRows(items) {
   tradeRows.replaceChildren();
 
@@ -1183,6 +1279,7 @@ function renderProbabilities(items) {
 function renderStatsMatrix() {
   statsMatrix.replaceChildren();
   const closest = closestLiveReference();
+  renderInPlay(closest);
 
   matrixSummary.textContent = closest
     ? `Closest reference: ${closest.label} is ${closest.distance.toFixed(2)} points away from current price.`
@@ -1206,6 +1303,73 @@ function renderStatsMatrix() {
     `;
     statsMatrix.append(table);
   });
+}
+
+function renderInPlay(closest) {
+  inPlayGrid.replaceChildren();
+  const plays = activeMatrixPlays();
+
+  if (!plays.length) {
+    const empty = document.createElement("p");
+    empty.textContent = "Enter current price and at least one reference level to see active probabilities.";
+    inPlayGrid.append(empty);
+    return;
+  }
+
+  plays.slice(0, 6).forEach((play) => {
+    const card = document.createElement("article");
+    card.className = `in-play-card ${play.label === closest?.label ? "primary-play" : ""}`;
+    card.innerHTML = `
+      <span>${play.distance.toFixed(2)} pts away</span>
+      <h4>${play.label}</h4>
+      <strong>${formatPercent(play.best.value)}</strong>
+      <small>Best edge: ${play.best.column}</small>
+      <div>
+        <b>${formatPercent(play.base)}</b>
+        <em>RTH touch rate</em>
+      </div>
+    `;
+    inPlayGrid.append(card);
+  });
+}
+
+function activeMatrixPlays() {
+  const current = Number(liveLevelInputs.current.value);
+  if (!current) return [];
+
+  return [
+    ["ONH", liveLevelInputs.onh.value],
+    ["ONL", liveLevelInputs.onl.value],
+    ["pVAH", liveLevelInputs.pvah.value],
+    ["pVAL", liveLevelInputs.pval.value],
+    ["pVPOC", liveLevelInputs.ppoc.value],
+    ["pMid", liveLevelInputs.pmid.value],
+    ["IBH", liveLevelInputs.ibh.value],
+    ["IBL", liveLevelInputs.ibl.value],
+  ]
+    .map(([label, value]) => ({ label, value: Number(value), row: findMatrixRow(label) }))
+    .filter((item) => Number.isFinite(item.value) && item.value > 0 && item.row)
+    .map((item) => {
+      const values = item.row[1];
+      const bestIndex = values.reduce((best, value, index) => value > values[best] ? index : best, 0);
+      return {
+        ...item,
+        distance: Math.abs(current - item.value),
+        base: values[0],
+        best: {
+          column: STATS_MATRIX_COLUMNS[bestIndex],
+          value: values[bestIndex],
+        },
+      };
+    })
+    .sort((a, b) => a.distance - b.distance);
+}
+
+function findMatrixRow(label) {
+  const normalized = label.toLowerCase();
+  const allRows = STATS_MATRIX_SECTIONS.flatMap((section) => section.rows);
+  return allRows.find(([rowLabel]) => rowLabel.toLowerCase() === normalized)
+    || allRows.find(([rowLabel]) => rowLabel.toLowerCase().includes(normalized));
 }
 
 function closestLiveReference() {

@@ -353,6 +353,7 @@ async function handleJournalSave(body = {}) {
     trades: Array.isArray(body.trades) ? body.trades : [],
     scorecards: body.scorecards && typeof body.scorecards === "object" ? body.scorecards : {},
     screenshots: body.screenshots && typeof body.screenshots === "object" ? body.screenshots : {},
+    tradePlans: body.tradePlans && typeof body.tradePlans === "object" ? body.tradePlans : {},
     savedAt: new Date().toISOString(),
   };
 
@@ -368,10 +369,11 @@ async function readJournalData() {
       trades: Array.isArray(data.trades) ? data.trades : [],
       scorecards: data.scorecards && typeof data.scorecards === "object" ? data.scorecards : {},
       screenshots: data.screenshots && typeof data.screenshots === "object" ? data.screenshots : {},
+      tradePlans: data.tradePlans && typeof data.tradePlans === "object" ? data.tradePlans : {},
       savedAt: data.savedAt || null,
     };
   } catch {
-    return { trades: [], scorecards: {}, screenshots: {}, savedAt: null };
+    return { trades: [], scorecards: {}, screenshots: {}, tradePlans: {}, savedAt: null };
   }
 }
 
