@@ -107,6 +107,7 @@ function readEnvFile() {
 }
 
 async function handleStatus() {
+  await loadTradovateSession();
   return ok({
     connected: Boolean(session.token),
     environment: session.environment,
@@ -159,7 +160,7 @@ async function handleConnect(body = {}) {
 
 async function handleSync(query = {}) {
   try {
-    await loadTradovateSession();
+    await ensureTradovateSession();
     assertConnected();
 
     const accountId = query.accountId || process.env.TRADOVATE_ACCOUNT_ID || "";
@@ -191,6 +192,19 @@ async function handleSync(query = {}) {
     });
   } catch (error) {
     return fail(error.status || 502, error.message);
+  }
+}
+
+async function ensureTradovateSession() {
+  await loadTradovateSession();
+  if (session.token) return;
+  if (!process.env.TRADOVATE_USERNAME || !process.env.TRADOVATE_PASSWORD) return;
+
+  const result = await handleConnect({});
+  if (result.status >= 400) {
+    const error = new Error(result.body.error || "Could not reconnect to Tradovate.");
+    error.status = result.status;
+    throw error;
   }
 }
 
