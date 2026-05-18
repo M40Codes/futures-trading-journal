@@ -19,6 +19,7 @@
         <a href="#playbook" data-section="playbook">Playbook</a>
         <a href="#reports" data-section="reports">Reports</a>
         <a href="#probabilities" data-section="probabilities">Probabilities</a>
+        <a href="#stats-matrix" data-section="stats-matrix">Stats Matrix</a>
       </nav>
     </aside>
 
@@ -490,6 +491,60 @@
               <tbody id="probabilityRows"></tbody>
             </table>
           </div>
+        </section>
+      </section>
+
+      <section class="app-section" data-section-panel="stats-matrix" id="stats-matrix">
+        <section class="section-header-panel">
+          <div>
+            <p class="eyebrow">Live Context</p>
+            <h2>Market Statistics Matrix</h2>
+            <p>Track where current price is relative to overnight, prior value, prior high/low, and IB levels.</p>
+          </div>
+        </section>
+
+        <section class="market-live-panel">
+          <label>
+            <span>Current Price</span>
+            <input id="liveCurrentPrice" type="number" step="0.01" placeholder="NQ current price">
+          </label>
+          <label>
+            <span>ONH</span>
+            <input id="liveOnh" type="number" step="0.01">
+          </label>
+          <label>
+            <span>ONL</span>
+            <input id="liveOnl" type="number" step="0.01">
+          </label>
+          <label>
+            <span>pVAH</span>
+            <input id="livePvah" type="number" step="0.01">
+          </label>
+          <label>
+            <span>pVAL</span>
+            <input id="livePval" type="number" step="0.01">
+          </label>
+          <label>
+            <span>pPOC</span>
+            <input id="livePpoc" type="number" step="0.01">
+          </label>
+          <label>
+            <span>pMID</span>
+            <input id="livePmid" type="number" step="0.01">
+          </label>
+          <label>
+            <span>IBH</span>
+            <input id="liveIbh" type="number" step="0.01">
+          </label>
+          <label>
+            <span>IBL</span>
+            <input id="liveIbl" type="number" step="0.01">
+          </label>
+        </section>
+
+        <section class="stats-matrix-panel">
+          <div class="matrix-summary" id="matrixSummary">Enter current price and levels to highlight the closest market reference.</div>
+          <div class="matrix-scroll" id="statsMatrix"></div>
         </section>
       </section>
     </main>

@@ -56,6 +56,19 @@ const probabilityRows = document.querySelector("#probabilityRows");
 const probabilityChartGrid = document.querySelector("#probabilityChartGrid");
 const playbookGrid = document.querySelector("#playbookGrid");
 const reportsGrid = document.querySelector("#reportsGrid");
+const statsMatrix = document.querySelector("#statsMatrix");
+const matrixSummary = document.querySelector("#matrixSummary");
+const liveLevelInputs = {
+  current: document.querySelector("#liveCurrentPrice"),
+  onh: document.querySelector("#liveOnh"),
+  onl: document.querySelector("#liveOnl"),
+  pvah: document.querySelector("#livePvah"),
+  pval: document.querySelector("#livePval"),
+  ppoc: document.querySelector("#livePpoc"),
+  pmid: document.querySelector("#livePmid"),
+  ibh: document.querySelector("#liveIbh"),
+  ibl: document.querySelector("#liveIbl"),
+};
 const contextInputs = {
   gapDirection: document.querySelector("#contextGapDirection"),
   gapFilled: document.querySelector("#contextGapFilled"),
@@ -184,6 +197,49 @@ const BENCHMARK_PATTERN_REPORTS = {
   ],
 };
 
+const STATS_MATRIX_COLUMNS = ["RTH", "Open Range", "Opening Range", "Gap", "Range", "Range Close", "LOD", "HOD"];
+const STATS_MATRIX_SECTIONS = [
+  {
+    title: "Prior / Overnight Levels",
+    rows: [
+      ["ONH or ONL", [96.2, 97.4, 94.0, 97.7, 96.9, 99.1, 85.2]],
+      ["ON/VPOC", [82.1, 82.8, 80.8, 83.2, 82.3, 84.0, 75.4]],
+      ["pVAH or pVAL", [78.5, 90.5, 56.3, 85.4, 92.7, 61.3, 47.5]],
+      ["pHI or pLO", [78.1, 83.5, 68.3, 80.9, 86.9, 68.9, 67.2]],
+      ["ON/MID", [75.3, 78.5, 69.5, 76.3, 81.5, 71.7, 65.8]],
+      ["ONH", [67.2, 69.3, 63.5, 79.2, 56.2, 78.3, 37.7]],
+      ["pCL", [64.0, 73.9, 46.1, 71.1, 77.7, 49.1, 41.0]],
+      ["pVAH", [60.0, 66.3, 48.5, 73.4, 56.9, 61.3, 26.2]],
+      ["pVPOC", [58.9, 69.0, 40.7, 69.4, 68.5, 43.4, 36.1]],
+      ["pMid", [55.3, 67.7, 32.9, 67.6, 67.7, 33.0, 32.8]],
+      ["ONL", [54.9, 57.1, 50.9, 50.3, 66.2, 42.5, 45.6]],
+      ["pHI", [53.2, 54.5, 50.9, 62.4, 43.8, 68.9, 19.7]],
+      ["pVAL", [50.0, 58.7, 34.1, 50.9, 69.2, 26.4, 47.5]],
+      ["pLO", [36.8, 38.3, 34.1, 28.3, 51.5, 15.1, 67.2]],
+      ["pVAH & pVAL", [31.5, 34.3, 26.3, 34.7, 33.8, 26.4, 26.2]],
+      ["ONH & ONL", [26.0, 29.0, 20.4, 31.8, 25.4, 21.7, 18.0]],
+      ["pHI & pLO", [11.9, 0.2, 16.8, 9.8, 8.5, 15.1, 19.7]],
+    ],
+  },
+  {
+    title: "Initial Balance Levels",
+    rows: [
+      ["IBH or IBL", [98.9, 99.0, 98.8, 98.8, 99.2, 99.1, 98.4]],
+      ["1.5xIBH or 1.5xIBL", [75.1, 73.9, 77.2, 74.6, 73.1, 81.1, 70.5]],
+      ["IBH", [68.7, 70.3, 65.9, 68.8, 72.3, 60.4, 75.4]],
+      ["IBL", [62.6, 65.0, 58.1, 65.9, 63.8, 62.3, 50.8]],
+      ["2.0xIBH or 2.0xIBL", [42.6, 43.6, 42.5, 41.6, 43.8, 45.3, 37.7]],
+      ["1.5xIBH", [41.5, 43.2, 38.2, 44.5, 41.5, 38.7, 37.7]],
+      ["1.5xIBL", [39.4, 37.3, 43.1, 38.7, 35.4, 48.1, 34.4]],
+      ["IBH & IBL", [32.3, 36.3, 25.1, 35.8, 36.9, 23.6, 27.9]],
+      ["2.0xIBL", [23.0, 22.1, 24.6, 21.4, 23.1, 28.3, 18.0]],
+      ["2.0xIBH", [20.9, 22.1, 18.6, 22.5, 21.5, 17.0, 21.3]],
+      ["1.5xIBH & 1.5xIBL", [5.7, 6.6, 4.2, 8.7, 3.8, 5.7, 1.6]],
+      ["2.0xIBH & 2.0xIBL", [1.3, 1.7, 0.6, 2.3, 0.8, 0, 1.6]],
+    ],
+  },
+];
+
 let trades = loadTrades();
 let scorecards = loadScorecard();
 let screenshots = loadScreenshots();
@@ -243,6 +299,9 @@ scorecardDate.addEventListener("change", () => {
 dailyReviewNote.addEventListener("input", saveDailyReviewNote);
 Object.values(contextInputs).forEach((input) => {
   input.addEventListener("change", saveMarketContext);
+});
+Object.values(liveLevelInputs).forEach((input) => {
+  input.addEventListener("input", renderStatsMatrix);
 });
 screenshotDate.addEventListener("change", () => {
   scorecardDate.value = screenshotDate.value;
@@ -659,6 +718,7 @@ function renderSecondarySections() {
   renderPlaybook(trades);
   renderReports(trades);
   renderProbabilities(trades);
+  renderStatsMatrix();
 }
 
 function renderScorecard() {
@@ -1118,6 +1178,69 @@ function renderProbabilities(items) {
     `;
     probabilityRows.append(row);
   });
+}
+
+function renderStatsMatrix() {
+  statsMatrix.replaceChildren();
+  const closest = closestLiveReference();
+
+  matrixSummary.textContent = closest
+    ? `Closest reference: ${closest.label} is ${closest.distance.toFixed(2)} points away from current price.`
+    : "Enter current price and levels to highlight the closest market reference.";
+
+  STATS_MATRIX_SECTIONS.forEach((section) => {
+    const table = document.createElement("div");
+    table.className = "stats-matrix-table";
+    table.innerHTML = `
+      <h3>${section.title}</h3>
+      <div class="stats-row stats-head">
+        <span>Reference</span>
+        ${STATS_MATRIX_COLUMNS.slice(0, 7).map((column) => `<b>${column}</b>`).join("")}
+      </div>
+      ${section.rows.map(([label, values]) => `
+        <div class="stats-row ${isHighlightedStat(label, closest?.label) ? "live-stat-row" : ""}">
+          <span>${label}</span>
+          ${values.map((value) => `<b class="${heatClass(value)}">${formatPercent(value)}</b>`).join("")}
+        </div>
+      `).join("")}
+    `;
+    statsMatrix.append(table);
+  });
+}
+
+function closestLiveReference() {
+  const current = Number(liveLevelInputs.current.value);
+  if (!current) return null;
+
+  const references = [
+    ["ONH", liveLevelInputs.onh.value],
+    ["ONL", liveLevelInputs.onl.value],
+    ["pVAH", liveLevelInputs.pvah.value],
+    ["pVAL", liveLevelInputs.pval.value],
+    ["pVPOC", liveLevelInputs.ppoc.value],
+    ["pMid", liveLevelInputs.pmid.value],
+    ["IBH", liveLevelInputs.ibh.value],
+    ["IBL", liveLevelInputs.ibl.value],
+  ]
+    .map(([label, value]) => ({ label, value: Number(value) }))
+    .filter((item) => Number.isFinite(item.value) && item.value > 0)
+    .map((item) => ({ ...item, distance: Math.abs(current - item.value) }))
+    .sort((a, b) => a.distance - b.distance);
+
+  return references[0] ?? null;
+}
+
+function isHighlightedStat(rowLabel, closestLabel) {
+  if (!closestLabel) return false;
+  return rowLabel.toLowerCase().includes(closestLabel.toLowerCase());
+}
+
+function heatClass(value) {
+  if (value >= 90) return "heat-strong";
+  if (value >= 75) return "heat-high";
+  if (value >= 55) return "heat-mid";
+  if (value >= 35) return "heat-low";
+  return "heat-cold";
 }
 
 function renderPatternProbabilityCharts() {

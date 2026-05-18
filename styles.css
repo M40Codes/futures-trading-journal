@@ -400,6 +400,114 @@ p {
   min-width: 880px;
 }
 
+.market-live-panel,
+.stats-matrix-panel {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 18px;
+  background: linear-gradient(180deg, rgba(17, 24, 39, 0.96), rgba(10, 16, 27, 0.96));
+  box-shadow: var(--shadow);
+}
+
+.market-live-panel {
+  display: grid;
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.market-live-panel label {
+  margin-bottom: 0;
+}
+
+.matrix-summary {
+  margin-bottom: 14px;
+  border: 1px solid rgba(45, 212, 191, 0.24);
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: rgba(45, 212, 191, 0.08);
+  color: #c7fff6;
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.matrix-scroll {
+  display: grid;
+  gap: 18px;
+  overflow-x: auto;
+}
+
+.stats-matrix-table {
+  min-width: 940px;
+}
+
+.stats-matrix-table h3 {
+  margin-bottom: 10px;
+}
+
+.stats-row {
+  display: grid;
+  grid-template-columns: 180px repeat(7, minmax(86px, 1fr));
+  gap: 4px;
+  align-items: stretch;
+  margin-bottom: 4px;
+}
+
+.stats-row span,
+.stats-row b {
+  display: grid;
+  min-height: 34px;
+  place-items: center;
+  border-radius: 4px;
+  padding: 6px;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-align: center;
+}
+
+.stats-row span {
+  justify-content: end;
+  color: var(--ink);
+  text-align: right;
+}
+
+.stats-head span,
+.stats-head b {
+  color: var(--muted);
+  background: transparent;
+}
+
+.live-stat-row span,
+.live-stat-row b {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.heat-strong {
+  background: #12b981;
+  color: #03120d;
+}
+
+.heat-high {
+  background: #4fd1a5;
+  color: #04120e;
+}
+
+.heat-mid {
+  background: #9fe0ca;
+  color: #071713;
+}
+
+.heat-low {
+  background: #d6e3de;
+  color: #17201d;
+}
+
+.heat-cold {
+  background: #f0e1e1;
+  color: #2b1515;
+}
+
 .probability-chart-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1180,6 +1288,7 @@ td {
   .connector-panel,
   .analysis-grid,
   .market-context-grid,
+  .market-live-panel,
   .scorecard-grid,
   .screenshot-panel,
   .workspace {
@@ -1240,6 +1349,7 @@ td {
   .analysis-grid,
   .probability-chart-grid,
   .market-context-grid,
+  .market-live-panel,
   .scorecard-grid,
   .screenshot-panel,
   .workspace,
