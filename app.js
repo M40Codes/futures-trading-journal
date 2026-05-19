@@ -86,6 +86,10 @@ const planInputs = {
   bullish: document.querySelector("#planBullish"),
   bearish: document.querySelector("#planBearish"),
   neutral: document.querySelector("#planNeutral"),
+  marketIdeas: document.querySelector("#planMarketIdeas"),
+  chartInput: document.querySelector("#planChartInput"),
+  chartImage: document.querySelector("#planChartImage"),
+  chartCaption: document.querySelector("#planChartCaption"),
   checklistNews: document.querySelector("#planChecklistNews"),
   checklistLevels: document.querySelector("#planChecklistLevels"),
   checklistRisk: document.querySelector("#planChecklistRisk"),
@@ -93,6 +97,8 @@ const planInputs = {
 };
 const savePlanButton = document.querySelector("#savePlanButton");
 const clearPlanButton = document.querySelector("#clearPlanButton");
+const clearPlanChartButton = document.querySelector("#clearPlanChartButton");
+const planSaveStatus = document.querySelector("#planSaveStatus");
 const biasInputGrid = document.querySelector("#biasInputGrid");
 const biasDriverRows = document.querySelector("#biasDriverRows");
 const biasLibraryRows = document.querySelector("#biasLibraryRows");
@@ -396,12 +402,14 @@ Object.values(liveLevelInputs).forEach((input) => {
 });
 planInputs.date.addEventListener("change", renderTradePlan);
 Object.entries(planInputs).forEach(([key, input]) => {
-  if (key === "date") return;
+  if (["date", "chartInput", "chartImage", "chartCaption"].includes(key)) return;
   input.addEventListener("input", saveTradePlan);
   input.addEventListener("change", saveTradePlan);
 });
 savePlanButton.addEventListener("click", saveTradePlan);
 clearPlanButton.addEventListener("click", clearTradePlan);
+planInputs.chartInput.addEventListener("change", savePlanChart);
+clearPlanChartButton.addEventListener("click", clearPlanChart);
 biasRecalculateButton.addEventListener("click", renderBiasCalculator);
 biasSaveButton.addEventListener("click", saveBiasState);
 biasResetInputsButton.addEventListener("click", resetBiasInputs);
@@ -1375,14 +1383,18 @@ function renderTradePlan() {
   planInputs.bullish.value = plan.bullish ?? "";
   planInputs.bearish.value = plan.bearish ?? "";
   planInputs.neutral.value = plan.neutral ?? "";
+  planInputs.marketIdeas.value = plan.marketIdeas ?? "";
   planInputs.checklistNews.checked = Boolean(plan.checklistNews);
   planInputs.checklistLevels.checked = Boolean(plan.checklistLevels);
   planInputs.checklistRisk.checked = Boolean(plan.checklistRisk);
   planInputs.checklistNoChase.checked = Boolean(plan.checklistNoChase);
+  renderPlanChart(plan);
 }
 
 function saveTradePlan() {
+  const existingPlan = tradePlans[selectedPlanDate()] ?? {};
   tradePlans[selectedPlanDate()] = {
+    ...existingPlan,
     bias: planInputs.bias.value,
     maxTrades: planInputs.maxTrades.value,
     maxLoss: planInputs.maxLoss.value,
@@ -1392,6 +1404,7 @@ function saveTradePlan() {
     bullish: planInputs.bullish.value,
     bearish: planInputs.bearish.value,
     neutral: planInputs.neutral.value,
+    marketIdeas: planInputs.marketIdeas.value,
     checklistNews: planInputs.checklistNews.checked,
     checklistLevels: planInputs.checklistLevels.checked,
     checklistRisk: planInputs.checklistRisk.checked,
@@ -1399,12 +1412,65 @@ function saveTradePlan() {
     updatedAt: new Date().toISOString(),
   };
   saveTradePlans();
+  setPlanSaveStatus("Game plan saved.");
 }
 
 function clearTradePlan() {
   delete tradePlans[selectedPlanDate()];
   saveTradePlans();
   renderTradePlan();
+  setPlanSaveStatus("Plan cleared.");
+}
+
+async function savePlanChart(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  const date = selectedPlanDate();
+  const dataUrl = await resizeImage(file, 1600, 0.84);
+  saveTradePlan();
+  const existingPlan = tradePlans[date] ?? {};
+  tradePlans[date] = {
+    ...existingPlan,
+    chart: {
+      name: file.name,
+      savedAt: new Date().toISOString(),
+      dataUrl,
+    },
+  };
+  saveTradePlans();
+  renderPlanChart(tradePlans[date]);
+  planInputs.chartInput.value = "";
+  setPlanSaveStatus("Pre-market chart saved.");
+}
+
+function clearPlanChart() {
+  const date = selectedPlanDate();
+  if (!tradePlans[date]?.chart) return;
+  delete tradePlans[date].chart;
+  saveTradePlans();
+  renderPlanChart(tradePlans[date]);
+  setPlanSaveStatus("Pre-market chart cleared.");
+}
+
+function renderPlanChart(plan = {}) {
+  const chart = plan.chart;
+  if (chart?.dataUrl) {
+    planInputs.chartImage.src = chart.dataUrl;
+    planInputs.chartImage.style.display = "block";
+    planInputs.chartCaption.textContent = `${chart.name || "Pre-market chart"} saved for ${selectedPlanDate()}.`;
+    clearPlanChartButton.disabled = false;
+    return;
+  }
+
+  planInputs.chartImage.removeAttribute("src");
+  planInputs.chartImage.style.display = "none";
+  planInputs.chartCaption.textContent = "No pre-market chart saved for this plan.";
+  clearPlanChartButton.disabled = true;
+}
+
+function setPlanSaveStatus(message) {
+  if (!planSaveStatus) return;
+  planSaveStatus.textContent = message;
 }
 
 function renderBiasCalculator() {

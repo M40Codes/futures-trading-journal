@@ -654,6 +654,30 @@
             </label>
           </div>
 
+          <div class="pre-market-chart-panel">
+            <div class="pre-market-chart-copy">
+              <h3>Pre-Market Chart & Ideas</h3>
+              <p>Attach the chart you are planning from and write the main market ideas for this session.</p>
+            </div>
+            <div class="pre-market-chart-grid">
+              <div>
+                <label>
+                  <span>Market Ideas</span>
+                  <textarea id="planMarketIdeas" rows="6" placeholder="Main thesis, invalidation, liquidity targets, what would change your mind..."></textarea>
+                </label>
+                <label class="file-picker">
+                  <span>Pre-Market Chart</span>
+                  <input id="planChartInput" type="file" accept="image/*">
+                </label>
+                <button class="danger-button" id="clearPlanChartButton" type="button">Clear Chart</button>
+              </div>
+              <figure class="screenshot-preview plan-chart-preview">
+                <img id="planChartImage" alt="Saved pre-market chart preview">
+                <figcaption id="planChartCaption">No pre-market chart saved for this plan.</figcaption>
+              </figure>
+            </div>
+          </div>
+
           <div class="plan-checklist">
             <label><input id="planChecklistNews" type="checkbox"> News checked</label>
             <label><input id="planChecklistLevels" type="checkbox"> Levels marked</label>
@@ -662,6 +686,7 @@
           </div>
 
           <div class="scorecard-actions">
+            <span class="save-status" id="planSaveStatus">Plan autosaves while you type.</span>
             <button class="primary-button" id="savePlanButton" type="button">Save Game Plan</button>
             <button class="danger-button" id="clearPlanButton" type="button">Clear Plan</button>
           </div>
