@@ -461,7 +461,7 @@ p {
 
 .market-live-panel {
   display: grid;
-  grid-template-columns: repeat(9, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 12px;
 }
@@ -543,6 +543,30 @@ p {
 .primary-play {
   border-color: rgba(45, 212, 191, 0.70);
   box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.10);
+}
+
+.master-target-card {
+  border-style: dashed;
+  border-width: 2px;
+}
+
+.conviction-target {
+  border-color: rgba(52, 211, 153, 0.75);
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.16), rgba(255, 255, 255, 0.035));
+}
+
+.conviction-target strong {
+  color: var(--win);
+  text-shadow: 0 0 18px rgba(52, 211, 153, 0.35);
+}
+
+.weak-target {
+  border-color: rgba(251, 191, 36, 0.42);
+  background: linear-gradient(180deg, rgba(251, 191, 36, 0.10), rgba(255, 255, 255, 0.03));
+}
+
+.weak-target strong {
+  color: var(--warning);
 }
 
 .matrix-scroll {

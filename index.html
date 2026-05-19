@@ -532,6 +532,22 @@
 
         <section class="market-live-panel">
           <label>
+            <span>Session Bias</span>
+            <select id="targetBias">
+              <option value="">Auto / Any</option>
+              <option value="long">Long setup</option>
+              <option value="short">Short setup</option>
+            </select>
+          </label>
+          <label>
+            <span>Entry Price</span>
+            <input id="targetEntry" type="number" step="0.01" placeholder="Optional">
+          </label>
+          <label>
+            <span>Structural Stop</span>
+            <input id="targetStop" type="number" step="0.01" placeholder="Invalidation">
+          </label>
+          <label>
             <span>Current Price</span>
             <input id="liveCurrentPrice" type="number" step="0.01" placeholder="NQ current price">
           </label>

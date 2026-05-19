@@ -64,6 +64,11 @@ const reportsGrid = document.querySelector("#reportsGrid");
 const statsMatrix = document.querySelector("#statsMatrix");
 const matrixSummary = document.querySelector("#matrixSummary");
 const inPlayGrid = document.querySelector("#inPlayGrid");
+const targetFilterInputs = {
+  bias: document.querySelector("#targetBias"),
+  entry: document.querySelector("#targetEntry"),
+  stop: document.querySelector("#targetStop"),
+};
 const liveLevelInputs = {
   current: document.querySelector("#liveCurrentPrice"),
   onh: document.querySelector("#liveOnh"),
@@ -403,6 +408,10 @@ Object.values(contextInputs).forEach((input) => {
 });
 Object.values(liveLevelInputs).forEach((input) => {
   input.addEventListener("input", renderStatsMatrix);
+});
+Object.values(targetFilterInputs).forEach((input) => {
+  input.addEventListener("input", renderStatsMatrix);
+  input.addEventListener("change", renderStatsMatrix);
 });
 planInputs.date.addEventListener("change", renderTradePlan);
 Object.entries(planInputs).forEach(([key, input]) => {
@@ -1978,35 +1987,50 @@ function renderStatsMatrix() {
 
 function renderInPlay(closest) {
   inPlayGrid.replaceChildren();
-  const plays = activeMatrixPlays();
+  const plays = masterTargetPlays();
+  const master = plays[0];
 
   if (!plays.length) {
     const empty = document.createElement("p");
-    empty.textContent = "Enter current price and at least one reference level to see active probabilities.";
+    empty.textContent = "Enter current price, target levels, and an optional long/short bias to identify the master target.";
     inPlayGrid.append(empty);
     return;
   }
 
-  plays.slice(0, 6).forEach((play) => {
+  plays.slice(0, 6).forEach((play, index) => {
     const card = document.createElement("article");
-    card.className = `in-play-card ${play.label === closest?.label ? "primary-play" : ""}`;
+    const classes = [
+      "in-play-card",
+      index === 0 ? "master-target-card" : "",
+      play.targetClass === "high" ? "conviction-target" : "",
+      play.targetClass === "weak" ? "weak-target" : "",
+      play.label === closest?.label ? "primary-play" : "",
+    ].filter(Boolean).join(" ");
+    card.className = classes;
     card.innerHTML = `
-      <span>${play.distance.toFixed(2)} pts away</span>
-      <h4>${play.label}</h4>
+      <span>${index === 0 ? "Master Target" : play.targetLabel} | ${play.sideLabel}</span>
+      <h4>${play.label} ${Number.isFinite(play.value) ? `@ ${play.value.toFixed(2)}` : ""}</h4>
       <strong>${formatPercent(play.best.value)}</strong>
-      <small>Best edge: ${play.best.column}</small>
+      <small>${play.distance.toFixed(2)} pts away | ${play.best.column}</small>
       <div>
-        <b>${formatPercent(play.base)}</b>
-        <em>RTH touch rate</em>
+        <b>${play.rrLabel}</b>
+        <em>${play.rrStatus}</em>
       </div>
     `;
     inPlayGrid.append(card);
   });
+
+  matrixSummary.innerHTML = master
+    ? `<b>Master Target Line:</b> ${master.label} at ${master.value.toFixed(2)} | ${formatPercent(master.best.value)} | ${master.rrStatus}`
+    : matrixSummary.textContent;
 }
 
-function activeMatrixPlays() {
+function masterTargetPlays() {
   const current = Number(liveLevelInputs.current.value);
   if (!current) return [];
+  const bias = targetFilterInputs.bias.value;
+  const entry = Number(targetFilterInputs.entry.value) || current;
+  const stop = Number(targetFilterInputs.stop.value);
 
   return [
     ["ONH", liveLevelInputs.onh.value],
@@ -2020,20 +2044,44 @@ function activeMatrixPlays() {
   ]
     .map(([label, value]) => ({ label, value: Number(value), row: findMatrixRow(label) }))
     .filter((item) => Number.isFinite(item.value) && item.value > 0 && item.row)
+    .filter((item) => {
+      if (bias === "long") return item.value > current;
+      if (bias === "short") return item.value < current;
+      return true;
+    })
     .map((item) => {
       const values = item.row[1];
       const bestIndex = values.reduce((best, value, index) => value > values[best] ? index : best, 0);
+      const reward = Math.abs(item.value - entry);
+      const risk = Number.isFinite(stop) && stop > 0 ? Math.abs(entry - stop) : NaN;
+      const rr = Number.isFinite(risk) && risk > 0 ? reward / risk : NaN;
+      const targetClass = values[bestIndex] >= 65 ? "high" : values[bestIndex] < 60 ? "weak" : "secondary";
       return {
         ...item,
         distance: Math.abs(current - item.value),
+        sideLabel: item.value >= current ? "Above price" : "Below price",
         base: values[0],
+        targetClass,
+        targetLabel: targetClass === "high" ? "65%+ draw" : targetClass === "weak" ? "Weak target" : "Secondary target",
+        reward,
+        risk,
+        rr,
+        rrLabel: Number.isFinite(rr) ? `${rr.toFixed(2)}R` : "R:R n/a",
+        rrStatus: rrStatus(rr, targetClass),
         best: {
           column: STATS_MATRIX_COLUMNS[bestIndex],
           value: values[bestIndex],
         },
       };
     })
-    .sort((a, b) => a.distance - b.distance);
+    .sort((a, b) => b.best.value - a.best.value || a.distance - b.distance);
+}
+
+function rrStatus(rr, targetClass) {
+  if (!Number.isFinite(rr)) return "Add entry and stop";
+  if (rr >= 2) return "R:R validator passed";
+  if (targetClass === "high") return "Low R:R / high probability";
+  return "R:R below 2:1";
 }
 
 function findMatrixRow(label) {
