@@ -96,6 +96,8 @@ const liveLevelInputs = {
   ibh: document.querySelector("#liveIbh"),
   ibl: document.querySelector("#liveIbl"),
 };
+const tradingViewLevelsStatus = document.querySelector("#tradingViewLevelsStatus");
+const pullTradingViewLevelsButton = document.querySelector("#pullTradingViewLevelsButton");
 const planInputs = {
   date: document.querySelector("#planDate"),
   bias: document.querySelector("#planBias"),
@@ -382,6 +384,7 @@ let focusElapsedBeforePause = 0;
 let timerRunning = true;
 let lastBreakHour = 0;
 let lastSessionEventKey = "";
+let lastTradingViewLevelsAt = "";
 
 const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -454,6 +457,7 @@ Object.values(targetFilterInputs).forEach((input) => {
 Object.values(rrInputs).forEach((input) => {
   input.addEventListener("input", renderRrValidator);
 });
+pullTradingViewLevelsButton?.addEventListener("click", () => fetchTradingViewLevels({ force: true }));
 planInputs.date.addEventListener("change", renderTradePlan);
 Object.entries(planInputs).forEach(([key, input]) => {
   if (["date", "chartInput", "chartImage", "chartCaption"].includes(key)) return;
@@ -506,6 +510,8 @@ document.querySelectorAll("[data-section-jump]").forEach((button) => {
   button.addEventListener("click", () => showSection(button.dataset.sectionJump));
 });
 showSection(window.location.hash.replace("#", "") || "dashboard");
+fetchTradingViewLevels();
+window.setInterval(fetchTradingViewLevels, 15000);
 
 seedButton.addEventListener("click", () => {
   trades = sampleTrades();
@@ -636,6 +642,79 @@ async function fetchJson(url, options) {
   }
 
   return data;
+}
+
+async function fetchTradingViewLevels(options = {}) {
+  if (window.location.protocol === "file:") {
+    setTradingViewLevelsStatus("Open the Render URL or localhost server to pull TradingView webhook levels.");
+    return;
+  }
+
+  try {
+    if (options.force) setTradingViewLevelsStatus("Checking for latest TradingView levels...");
+    const data = await fetchJson("/api/tradingview/levels");
+    if (!data.savedAt || !data.levels || !Object.keys(data.levels).length) {
+      setTradingViewLevelsStatus("Waiting for the first TradingView webhook.");
+      return;
+    }
+
+    if (!options.force && data.savedAt === lastTradingViewLevelsAt) return;
+    lastTradingViewLevelsAt = data.savedAt;
+    applyTradingViewLevels(data.levels, data.savedAt);
+  } catch (error) {
+    setTradingViewLevelsStatus(`TradingView levels unavailable: ${error.message}`);
+  }
+}
+
+function applyTradingViewLevels(levels = {}, savedAt = "") {
+  const levelMap = {
+    current: liveLevelInputs.current,
+    onh: liveLevelInputs.onh,
+    onl: liveLevelInputs.onl,
+    pvah: liveLevelInputs.pvah,
+    pval: liveLevelInputs.pval,
+    ppoc: liveLevelInputs.ppoc,
+    pmid: liveLevelInputs.pmid,
+    ibh: liveLevelInputs.ibh,
+    ibl: liveLevelInputs.ibl,
+  };
+
+  Object.entries(levelMap).forEach(([key, input]) => {
+    if (!input || !isFiniteLevel(levels[key])) return;
+    input.value = Number(levels[key]).toFixed(2);
+  });
+
+  if (["long", "short"].includes(levels.bias)) {
+    targetFilterInputs.bias.value = levels.bias;
+  }
+
+  if (isFiniteLevel(levels.entry)) {
+    targetFilterInputs.entry.value = Number(levels.entry).toFixed(2);
+    rrInputs.entry.value = Number(levels.entry).toFixed(2);
+  }
+
+  if (isFiniteLevel(levels.stop)) {
+    targetFilterInputs.stop.value = Number(levels.stop).toFixed(2);
+    rrInputs.stop.value = Number(levels.stop).toFixed(2);
+  }
+
+  if (isFiniteLevel(levels.target)) {
+    rrInputs.target.value = Number(levels.target).toFixed(2);
+  }
+
+  renderStatsMatrix();
+  renderRrValidator();
+  const savedLabel = savedAt ? new Date(savedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" }) : "now";
+  const symbolLabel = levels.symbol ? `${levels.symbol} ` : "";
+  setTradingViewLevelsStatus(`${symbolLabel}levels synced from TradingView at ${savedLabel}.`);
+}
+
+function setTradingViewLevelsStatus(message) {
+  if (tradingViewLevelsStatus) tradingViewLevelsStatus.textContent = message;
+}
+
+function isFiniteLevel(value) {
+  return value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
 }
 
 function setConnectorBusy(isBusy, message) {
