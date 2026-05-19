@@ -108,6 +108,10 @@ const imageLightbox = document.querySelector("#imageLightbox");
 const lightboxImage = document.querySelector("#lightboxImage");
 const lightboxCaption = document.querySelector("#lightboxCaption");
 const lightboxCloseButton = document.querySelector("#lightboxCloseButton");
+const liveClock = document.querySelector("#liveClock");
+const focusTimer = document.querySelector("#focusTimer");
+const breakAlert = document.querySelector("#breakAlert");
+const dismissBreakButton = document.querySelector("#dismissBreakButton");
 const biasInputGrid = document.querySelector("#biasInputGrid");
 const biasDriverRows = document.querySelector("#biasDriverRows");
 const biasLibraryRows = document.querySelector("#biasLibraryRows");
@@ -347,6 +351,8 @@ let editingId = null;
 let calendarDate = new Date();
 let serverSyncReady = false;
 let saveTimer = null;
+let focusStartedAt = Date.now();
+let lastBreakHour = 0;
 
 const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -369,6 +375,8 @@ renderScreenshot();
 renderTradePlan();
 renderBiasCalculator();
 render();
+updateClockBar();
+window.setInterval(updateClockBar, 1000);
 checkTradovateStatus();
 hydrateFromServer();
 
@@ -428,6 +436,7 @@ lightboxCloseButton.addEventListener("click", closeImageLightbox);
 imageLightbox.addEventListener("click", (event) => {
   if (event.target === imageLightbox) closeImageLightbox();
 });
+dismissBreakButton.addEventListener("click", dismissBreakAlert);
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeImageLightbox();
 });
@@ -1441,6 +1450,45 @@ function clearTradePlan() {
   saveTradePlans();
   renderTradePlan();
   setPlanSaveStatus("Plan cleared.");
+}
+
+function updateClockBar() {
+  if (!liveClock || !focusTimer) return;
+  const now = new Date();
+  liveClock.textContent = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  }).format(now);
+
+  const elapsedSeconds = Math.floor((Date.now() - focusStartedAt) / 1000);
+  const hours = Math.floor(elapsedSeconds / 3600);
+  const minutes = Math.floor((elapsedSeconds % 3600) / 60);
+  const seconds = elapsedSeconds % 60;
+  focusTimer.textContent = hours > 0
+    ? `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
+    : `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+
+  const completedHour = Math.floor(elapsedSeconds / 3600);
+  if (completedHour > 0 && completedHour > lastBreakHour) {
+    lastBreakHour = completedHour;
+    showBreakAlert(completedHour);
+  }
+}
+
+function showBreakAlert(hour) {
+  if (!breakAlert) return;
+  breakAlert.textContent = `${hour} hour${hour === 1 ? "" : "s"} focused. Stand up, reset your eyes, review risk, then continue.`;
+  breakAlert.classList.add("active");
+}
+
+function dismissBreakAlert() {
+  breakAlert.classList.remove("active");
+  breakAlert.textContent = "Break alert armed. You will get a reminder every hour.";
+  focusStartedAt = Date.now();
+  lastBreakHour = 0;
 }
 
 async function savePlanChart(event) {
