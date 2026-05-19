@@ -610,13 +610,18 @@ async function syncTradovateTrades() {
     return;
   }
 
-  const accountQuery = tradovateAccountId.value.trim()
-    ? `?accountId=${encodeURIComponent(tradovateAccountId.value.trim())}`
-    : "";
-
   setConnectorBusy(true, "Syncing Tradovate fills...");
   try {
-    const result = await fetchJson(`/api/tradovate/sync${accountQuery}`);
+    const result = await fetchJson("/api/tradovate/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        environment: tradovateEnvironment.value,
+        username: tradovateUsername.value.trim(),
+        password: tradovatePassword.value,
+        accountId: tradovateAccountId.value.trim(),
+      }),
+    });
     const before = trades.length;
     const knownIds = new Set(trades.map((trade) => trade.sourceId || trade.id));
     const imported = result.trades.filter((trade) => !knownIds.has(trade.sourceId || trade.id));
@@ -625,6 +630,7 @@ async function syncTradovateTrades() {
     saveTrades();
     render();
 
+    tradovatePassword.value = "";
     tradovateStatus.textContent = `Synced ${imported.length} new trades from ${result.fillCount} fills. ${before + imported.length} trades in journal.`;
   } catch (error) {
     tradovateStatus.textContent = error.message;

@@ -11,6 +11,7 @@ const __dirname = path.dirname(__filename);
 const port = Number(process.env.PORT || 8000);
 const dataFilePath = path.join(__dirname, process.env.JOURNAL_DATA_FILE || "journal-data.json");
 const tradovateSessionPath = path.join(__dirname, process.env.TRADOVATE_SESSION_FILE || "tradovate-session.json");
+const tradingViewLevelsPath = path.join(__dirname, process.env.TRADINGVIEW_LEVELS_FILE || "tradingview-levels.json");
 
 const POINT_VALUES = {
   ES: 50,
@@ -50,6 +51,12 @@ if (express) {
   app.get("/api/auth/status", (request, response) => sendExpress(response, handleAuthStatus(request.headers.cookie)));
   app.post("/api/auth/login", async (request, response) => sendExpress(response, handleLogin(request.body, response)));
   app.post("/api/auth/logout", (_request, response) => sendExpress(response, handleLogout(response)));
+  app.post("/api/tradingview/levels", async (request, response) => {
+    sendExpress(response, await handleTradingViewLevelsSave(request.body, {
+      headers: request.headers,
+      query: request.query,
+    }));
+  });
   app.use((request, response, next) => {
     if (isAllowedWithoutAuth(request.path) || isAuthenticated(request.headers.cookie)) {
       next();
@@ -65,8 +72,10 @@ if (express) {
   app.get("/api/tradovate/status", async (_request, response) => sendExpress(response, await handleStatus()));
   app.post("/api/tradovate/connect", async (request, response) => sendExpress(response, await handleConnect(request.body)));
   app.get("/api/tradovate/sync", async (request, response) => sendExpress(response, await handleSync(request.query)));
+  app.post("/api/tradovate/sync", async (request, response) => sendExpress(response, await handleSync(request.body)));
   app.get("/api/journal", async (_request, response) => sendExpress(response, await handleJournalLoad()));
   app.post("/api/journal", async (request, response) => sendExpress(response, await handleJournalSave(request.body)));
+  app.get("/api/tradingview/levels", async (_request, response) => sendExpress(response, await handleTradingViewLevelsLoad()));
   app.listen(port, () => console.log(`Futures journal running at http://localhost:${port} with Express`));
 } else {
   http.createServer(nativeHandler).listen(port, () => {
@@ -109,7 +118,7 @@ function readEnvFile() {
 async function handleStatus() {
   await loadTradovateSession();
   return ok({
-    connected: Boolean(session.token),
+    connected: Boolean(session.token) && !isTradovateSessionExpired(),
     environment: session.environment,
     userId: session.userId,
     expiresAt: session.expiresAt,
@@ -160,17 +169,17 @@ async function handleConnect(body = {}) {
 
 async function handleSync(query = {}) {
   try {
-    await ensureTradovateSession();
+    await ensureTradovateSession(query);
     assertConnected();
 
     const accountId = query.accountId || process.env.TRADOVATE_ACCOUNT_ID || "";
-    const fills = await tradovateRequest("/fill/list");
+    const fills = await tradovateRequestWithReconnect("/fill/list", query);
     const orderIds = unique(fills.map((fill) => fill.orderId).filter(Boolean));
     const contractIds = unique(fills.map((fill) => fill.contractId).filter(Boolean));
 
     const [orders, contracts] = await Promise.all([
-      fetchItems("/order/items", orderIds),
-      fetchItems("/contract/items", contractIds),
+      fetchItems("/order/items", orderIds, query),
+      fetchItems("/contract/items", contractIds, query),
     ]);
 
     const ordersById = indexBy(orders, "id");
@@ -195,12 +204,15 @@ async function handleSync(query = {}) {
   }
 }
 
-async function ensureTradovateSession() {
+async function ensureTradovateSession(credentials = {}) {
   await loadTradovateSession();
-  if (session.token) return;
-  if (!process.env.TRADOVATE_USERNAME || !process.env.TRADOVATE_PASSWORD) return;
+  if (session.token && !isTradovateSessionExpired()) return;
 
-  const result = await handleConnect({});
+  clearTradovateSession();
+  const hasCredentials = credentials.username || credentials.password || process.env.TRADOVATE_USERNAME || process.env.TRADOVATE_PASSWORD;
+  if (!hasCredentials) return;
+
+  const result = await handleConnect(credentials);
   if (result.status >= 400) {
     const error = new Error(result.body.error || "Could not reconnect to Tradovate.");
     error.status = result.status;
@@ -231,6 +243,14 @@ async function nativeHandler(request, response) {
     return;
   }
 
+  if (request.method === "POST" && url.pathname === "/api/tradingview/levels") {
+    sendNative(response, await handleTradingViewLevelsSave(await readJson(request), {
+      headers: request.headers,
+      query: Object.fromEntries(url.searchParams),
+    }));
+    return;
+  }
+
   if (!isAllowedWithoutAuth(url.pathname) && !isAuthenticated(request.headers.cookie)) {
     if (url.pathname.startsWith("/api/")) {
       sendNative(response, fail(401, "Login required."));
@@ -256,6 +276,11 @@ async function nativeHandler(request, response) {
     return;
   }
 
+  if (request.method === "POST" && url.pathname === "/api/tradovate/sync") {
+    sendNative(response, await handleSync(await readJson(request)));
+    return;
+  }
+
   if (request.method === "GET" && url.pathname === "/api/journal") {
     sendNative(response, await handleJournalLoad());
     return;
@@ -263,6 +288,11 @@ async function nativeHandler(request, response) {
 
   if (request.method === "POST" && url.pathname === "/api/journal") {
     sendNative(response, await handleJournalSave(await readJson(request)));
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/tradingview/levels") {
+    sendNative(response, await handleTradingViewLevelsLoad());
     return;
   }
 
@@ -375,6 +405,84 @@ async function handleJournalSave(body = {}) {
   return ok({ saved: true, savedAt: data.savedAt });
 }
 
+async function handleTradingViewLevelsLoad() {
+  return ok(await readTradingViewLevels());
+}
+
+async function handleTradingViewLevelsSave(body = {}, request = {}) {
+  const secret = process.env.TRADINGVIEW_WEBHOOK_SECRET;
+  const providedSecret = String(
+    body.secret
+      || request.headers?.["x-webhook-secret"]
+      || request.query?.secret
+      || ""
+  );
+
+  if (secret && !timingSafeEqualText(providedSecret, secret)) {
+    return fail(401, "Invalid TradingView webhook secret.");
+  }
+
+  const levels = normalizeTradingViewLevels(body);
+  const hasAnyLevel = Object.values(levels).some((value) => Number.isFinite(value))
+    || ["long", "short"].includes(levels.bias);
+
+  if (!hasAnyLevel) {
+    return fail(400, "No usable TradingView levels found in webhook payload.");
+  }
+
+  const data = {
+    source: "tradingview",
+    savedAt: new Date().toISOString(),
+    levels,
+  };
+
+  await writeTradingViewLevels(data);
+  return ok({ saved: true, ...data });
+}
+
+function normalizeTradingViewLevels(body = {}) {
+  return {
+    symbol: cleanText(firstValue(body, ["symbol", "ticker", "contract"])).toUpperCase(),
+    current: cleanNumber(firstValue(body, ["current", "currentPrice", "price", "last", "close"])),
+    onh: cleanNumber(firstValue(body, ["onh", "ONH", "overnightHigh"])),
+    onl: cleanNumber(firstValue(body, ["onl", "ONL", "overnightLow"])),
+    pvah: cleanNumber(firstValue(body, ["pvah", "pVAH", "previousVAH", "priorVAH"])),
+    pval: cleanNumber(firstValue(body, ["pval", "pVAL", "previousVAL", "priorVAL"])),
+    ppoc: cleanNumber(firstValue(body, ["ppoc", "pPOC", "pvpoc", "pVPOC", "vpoc", "previousPOC"])),
+    pmid: cleanNumber(firstValue(body, ["pmid", "pMID", "previousMID", "priorMID"])),
+    ibh: cleanNumber(firstValue(body, ["ibh", "IBH", "initialBalanceHigh"])),
+    ibl: cleanNumber(firstValue(body, ["ibl", "IBL", "initialBalanceLow"])),
+    entry: cleanNumber(firstValue(body, ["entry", "entryPrice"])),
+    stop: cleanNumber(firstValue(body, ["stop", "stopPrice", "structuralStop", "invalidation"])),
+    target: cleanNumber(firstValue(body, ["target", "targetPrice", "masterTarget"])),
+    bias: cleanBias(firstValue(body, ["bias", "setup", "direction"])),
+  };
+}
+
+function firstValue(object, keys) {
+  for (const key of keys) {
+    if (object[key] !== undefined && object[key] !== null && object[key] !== "") return object[key];
+  }
+  return "";
+}
+
+function cleanText(value) {
+  return String(value || "").trim();
+}
+
+function cleanNumber(value) {
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  const parsed = Number(String(value || "").replace(/[$,%\s,]/g, ""));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function cleanBias(value) {
+  const text = cleanText(value).toLowerCase();
+  if (text.includes("long") || text.includes("bull")) return "long";
+  if (text.includes("short") || text.includes("bear")) return "short";
+  return "";
+}
+
 async function readJournalData() {
   try {
     const text = await fs.promises.readFile(dataFilePath, "utf8");
@@ -395,6 +503,26 @@ async function writeJournalData(data) {
   const temporaryPath = `${dataFilePath}.tmp`;
   await fs.promises.writeFile(temporaryPath, JSON.stringify(data, null, 2));
   await fs.promises.rename(temporaryPath, dataFilePath);
+}
+
+async function readTradingViewLevels() {
+  try {
+    const text = await fs.promises.readFile(tradingViewLevelsPath, "utf8");
+    const data = JSON.parse(text);
+    return {
+      source: data.source || "tradingview",
+      savedAt: data.savedAt || null,
+      levels: data.levels && typeof data.levels === "object" ? data.levels : {},
+    };
+  } catch {
+    return { source: "tradingview", savedAt: null, levels: {} };
+  }
+}
+
+async function writeTradingViewLevels(data) {
+  const temporaryPath = `${tradingViewLevelsPath}.tmp`;
+  await fs.promises.writeFile(temporaryPath, JSON.stringify(data, null, 2));
+  await fs.promises.rename(temporaryPath, tradingViewLevelsPath);
 }
 
 function sendExpress(response, result) {
@@ -524,14 +652,26 @@ async function tradovateRequest(endpoint, options = {}) {
   return data;
 }
 
-async function fetchItems(endpoint, ids) {
+async function tradovateRequestWithReconnect(endpoint, credentials = {}, options = {}) {
+  try {
+    return await tradovateRequest(endpoint, options);
+  } catch (error) {
+    if (error.status !== 401) throw error;
+    clearTradovateSession();
+    await ensureTradovateSession(credentials);
+    assertConnected();
+    return tradovateRequest(endpoint, options);
+  }
+}
+
+async function fetchItems(endpoint, ids, credentials = {}) {
   const chunks = chunk(ids, 80);
   const results = [];
 
   for (const idsChunk of chunks) {
     if (!idsChunk.length) continue;
     const query = new URLSearchParams({ ids: idsChunk.join(",") });
-    const items = await tradovateRequest(`${endpoint}?${query.toString()}`);
+    const items = await tradovateRequestWithReconnect(`${endpoint}?${query.toString()}`, credentials);
     results.push(...items);
   }
 
@@ -629,6 +769,19 @@ function assertConnected() {
     error.status = 401;
     throw error;
   }
+}
+
+function isTradovateSessionExpired() {
+  if (!session.expiresAt) return false;
+  const expiresAt = new Date(session.expiresAt).getTime();
+  if (!Number.isFinite(expiresAt)) return false;
+  return expiresAt <= Date.now() + 60_000;
+}
+
+function clearTradovateSession() {
+  session.token = null;
+  session.userId = null;
+  session.expiresAt = null;
 }
 
 async function saveTradovateSession() {
