@@ -34,6 +34,8 @@ const recentTradesList = document.querySelector("#recentTradesList");
 const scorecardGrid = document.querySelector("#scorecardGrid");
 const perfectScoreButton = document.querySelector("#perfectScoreButton");
 const resetScoreButton = document.querySelector("#resetScoreButton");
+const saveScorecardButton = document.querySelector("#saveScorecardButton");
+const scorecardSaveStatus = document.querySelector("#scorecardSaveStatus");
 const scorecardDate = document.querySelector("#scorecardDate");
 const dailyReviewNote = document.querySelector("#dailyReviewNote");
 const screenshotDate = document.querySelector("#screenshotDate");
@@ -315,11 +317,13 @@ outcomeFilter.addEventListener("change", render);
 csvInput.addEventListener("change", importCsvTrades);
 perfectScoreButton.addEventListener("click", markPerfectScorecard);
 resetScoreButton.addEventListener("click", resetScorecard);
+saveScorecardButton.addEventListener("click", saveDailyReview);
 scorecardDate.addEventListener("change", () => {
   screenshotDate.value = scorecardDate.value;
   renderScorecard();
   renderScreenshot();
   renderDailyGrid(filteredTrades());
+  setScorecardSaveStatus("Loaded selected day.");
 });
 dailyReviewNote.addEventListener("input", saveDailyReviewNote);
 Object.values(contextInputs).forEach((input) => {
@@ -516,6 +520,7 @@ function loadScorecard() {
 function saveScorecard() {
   localStorage.setItem(SCORE_STORAGE_KEY, JSON.stringify(scorecards));
   scheduleServerSave();
+  setScorecardSaveStatus("Saved locally. Syncing...");
 }
 
 function todayKey() {
@@ -616,8 +621,10 @@ async function saveJournalToServer() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ trades, scorecards, screenshots, tradePlans }),
     });
+    setScorecardSaveStatus("Saved to this device and server.");
   } catch {
     serverSyncReady = false;
+    setScorecardSaveStatus("Saved on this device. Server sync paused.");
   }
 }
 
@@ -1223,6 +1230,29 @@ function resetScorecard() {
   saveScorecard();
   renderScorecard();
   renderDailyGrid(filteredTrades());
+}
+
+async function saveDailyReview() {
+  const review = currentReview();
+  review.note = dailyReviewNote.value;
+  review.context = Object.fromEntries(Object.entries(contextInputs).map(([key, input]) => [key, input.value]));
+  saveLocalOnly();
+  setScorecardSaveStatus("Saving daily review...");
+
+  if (window.location.protocol === "file:") {
+    setScorecardSaveStatus("Saved on this device.");
+  } else {
+    serverSyncReady = true;
+    await saveJournalToServer();
+  }
+
+  renderDailyGrid(filteredTrades());
+  renderProbabilities(trades);
+}
+
+function setScorecardSaveStatus(message) {
+  if (!scorecardSaveStatus) return;
+  scorecardSaveStatus.textContent = message;
 }
 
 function saveDailyReviewNote() {
