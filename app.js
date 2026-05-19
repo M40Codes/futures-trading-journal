@@ -1,6 +1,7 @@
 const STORAGE_KEY = "futures-journal:v2";
 const SCORE_STORAGE_KEY = "futures-scorecard:v1";
 const SCREENSHOT_STORAGE_KEY = "futures-screenshots:v1";
+const BIAS_STORAGE_KEY = "nq-bias-calculator:v1";
 
 const CONTRACTS = {
   ES: { name: "E-mini S&P 500", pointValue: 50 },
@@ -92,6 +93,27 @@ const planInputs = {
 };
 const savePlanButton = document.querySelector("#savePlanButton");
 const clearPlanButton = document.querySelector("#clearPlanButton");
+const biasInputGrid = document.querySelector("#biasInputGrid");
+const biasDriverRows = document.querySelector("#biasDriverRows");
+const biasLibraryRows = document.querySelector("#biasLibraryRows");
+const biasRecalculateButton = document.querySelector("#biasRecalculateButton");
+const biasSaveButton = document.querySelector("#biasSaveButton");
+const biasResetInputsButton = document.querySelector("#biasResetInputsButton");
+const biasAddStatButton = document.querySelector("#biasAddStatButton");
+const biasRestoreButton = document.querySelector("#biasRestoreButton");
+const biasOutput = {
+  longPercent: document.querySelector("#biasLongPercent"),
+  shortPercent: document.querySelector("#biasShortPercent"),
+  longLabel: document.querySelector("#biasLongLabel"),
+  shortLabel: document.querySelector("#biasShortLabel"),
+  score: document.querySelector("#biasScore"),
+  driverCount: document.querySelector("#biasDriverCount"),
+  longPressure: document.querySelector("#biasLongPressure"),
+  shortPressure: document.querySelector("#biasShortPressure"),
+  longPressureLabel: document.querySelector("#biasLongPressureLabel"),
+  shortPressureLabel: document.querySelector("#biasShortPressureLabel"),
+  narrative: document.querySelector("#biasNarrative"),
+};
 const contextInputs = {
   gapDirection: document.querySelector("#contextGapDirection"),
   gapFilled: document.querySelector("#contextGapFilled"),
@@ -263,10 +285,49 @@ const STATS_MATRIX_SECTIONS = [
   },
 ];
 
+const BIAS_INPUTS = [
+  { id: "weekday", label: "Weekday", options: [["weekday_mon", "Monday"], ["weekday_tue", "Tuesday"], ["weekday_wed", "Wednesday"], ["weekday_thu", "Thursday"], ["weekday_fri", "Friday"]] },
+  { id: "open15", label: "15 min opening candle", options: [["open15_green", "Green candle"], ["open15_red", "Red candle"]] },
+  { id: "open30", label: "30 min opening candle", options: [["open30_green", "Green candle"], ["open30_red", "Red candle"]] },
+  { id: "open60", label: "60 min opening candle", options: [["open60_green", "Green candle"], ["open60_red", "Red candle"]] },
+  { id: "ib30", label: "IB30 first break", options: [["ibh30_first", "IBH30 first"], ["ibl30_first", "IBL30 first"]] },
+  { id: "openingSwing", label: "Opening swing first break", options: [["onh_first", "ONH first"], ["onl_first", "ONL first"]] },
+  { id: "previousValue", label: "Vs previous day value", options: [["outside_prev_value", "Outside previous value"], ["inside_prev_value", "Inside previous value"]] },
+  { id: "previousRange", label: "Vs previous day range", options: [["outside_prev_range", "Outside previous range"], ["inside_prev_range", "Inside previous range"]] },
+  { id: "structure", label: "Extra structure level", options: [["gap_up", "Gap up"], ["gap_down", "Gap down"], ["prior_high", "Prior high first"], ["prior_low", "Prior low first"]] },
+];
+
+const DEFAULT_BIAS_STATS = [
+  { key: "open15_green", description: "15m opening candle green", bull: 66.67, weight: 1.00, notes: "From screenshot" },
+  { key: "open15_red", description: "15m opening candle red", bull: 32.79, weight: 1.00, notes: "From screenshot" },
+  { key: "open30_green", description: "30m opening candle green", bull: 67.11, weight: 1.10, notes: "From screenshot" },
+  { key: "open30_red", description: "30m opening candle red", bull: 27.78, weight: 1.10, notes: "From screenshot" },
+  { key: "open60_green", description: "60m opening candle green", bull: 74.65, weight: 1.20, notes: "From screenshot" },
+  { key: "open60_red", description: "60m opening candle red", bull: 22.03, weight: 1.20, notes: "From screenshot" },
+  { key: "weekday_mon", description: "Monday bias", bull: 74.07, weight: 0.70, notes: "Open-to-close screenshot" },
+  { key: "weekday_tue", description: "Tuesday bias", bull: 40.74, weight: 0.70, notes: "Open-to-close screenshot" },
+  { key: "weekday_wed", description: "Wednesday bias", bull: 42.31, weight: 0.70, notes: "Open-to-close screenshot" },
+  { key: "weekday_thu", description: "Thursday bias", bull: 37.50, weight: 0.70, notes: "Open-to-close screenshot" },
+  { key: "weekday_fri", description: "Friday bias", bull: 57.69, weight: 0.70, notes: "Open-to-close screenshot" },
+  { key: "outside_prev_value", description: "Outside previous day value", bull: 64.50, weight: 0.90, notes: "Placeholder. Edit with your stats." },
+  { key: "inside_prev_value", description: "Inside previous day value", bull: 50.00, weight: 0.70, notes: "Neutral placeholder" },
+  { key: "outside_prev_range", description: "Outside previous day range", bull: 61.00, weight: 0.90, notes: "Placeholder. Edit with your stats." },
+  { key: "inside_prev_range", description: "Inside previous day range", bull: 50.00, weight: 0.70, notes: "Neutral placeholder" },
+  { key: "ibh30_first", description: "IBH30 broke first", bull: 68.70, weight: 1.15, notes: "Stats matrix IBH row" },
+  { key: "ibl30_first", description: "IBL30 broke first", bull: 37.40, weight: 1.15, notes: "Inverse of IBL pressure" },
+  { key: "onh_first", description: "ONH broke first", bull: 67.20, weight: 1.00, notes: "Stats matrix ONH row" },
+  { key: "onl_first", description: "ONL broke first", bull: 45.10, weight: 1.00, notes: "Inverse of ONL pressure" },
+  { key: "gap_up", description: "Gap up continuation", bull: 58.00, weight: 0.80, notes: "Gap fill screenshot" },
+  { key: "gap_down", description: "Gap down continuation", bull: 40.00, weight: 0.80, notes: "Gap fill screenshot inverse" },
+  { key: "prior_high", description: "Prior high first", bull: 63.00, weight: 0.85, notes: "Editable structure stat" },
+  { key: "prior_low", description: "Prior low first", bull: 38.00, weight: 0.85, notes: "Editable structure stat" },
+];
+
 let trades = loadTrades();
 let scorecards = loadScorecard();
 let screenshots = loadScreenshots();
 let tradePlans = loadTradePlans();
+let biasState = loadBiasState();
 let editingId = null;
 let calendarDate = new Date();
 let serverSyncReady = false;
@@ -291,6 +352,7 @@ syncPointValue();
 renderScorecard();
 renderScreenshot();
 renderTradePlan();
+renderBiasCalculator();
 render();
 checkTradovateStatus();
 hydrateFromServer();
@@ -340,6 +402,11 @@ Object.entries(planInputs).forEach(([key, input]) => {
 });
 savePlanButton.addEventListener("click", saveTradePlan);
 clearPlanButton.addEventListener("click", clearTradePlan);
+biasRecalculateButton.addEventListener("click", renderBiasCalculator);
+biasSaveButton.addEventListener("click", saveBiasState);
+biasResetInputsButton.addEventListener("click", resetBiasInputs);
+biasAddStatButton.addEventListener("click", addBiasStatRow);
+biasRestoreButton.addEventListener("click", restoreBiasDefaults);
 screenshotDate.addEventListener("change", () => {
   scorecardDate.value = screenshotDate.value;
   renderScorecard();
@@ -563,6 +630,23 @@ function loadTradePlans() {
 function saveTradePlans() {
   localStorage.setItem("futures-trade-plans:v1", JSON.stringify(tradePlans));
   scheduleServerSave();
+}
+
+function loadBiasState() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(BIAS_STORAGE_KEY));
+    return {
+      inputs: stored?.inputs ?? {},
+      stats: Array.isArray(stored?.stats) && stored.stats.length ? stored.stats : structuredClone(DEFAULT_BIAS_STATS),
+    };
+  } catch {
+    return { inputs: {}, stats: structuredClone(DEFAULT_BIAS_STATS) };
+  }
+}
+
+function saveBiasState() {
+  localStorage.setItem(BIAS_STORAGE_KEY, JSON.stringify(biasState));
+  renderBiasCalculator();
 }
 
 async function hydrateFromServer() {
@@ -1063,6 +1147,7 @@ function renderSecondarySections() {
   renderReports(trades);
   renderProbabilities(trades);
   renderStatsMatrix();
+  renderBiasCalculator();
 }
 
 function renderScorecard() {
@@ -1320,6 +1405,180 @@ function clearTradePlan() {
   delete tradePlans[selectedPlanDate()];
   saveTradePlans();
   renderTradePlan();
+}
+
+function renderBiasCalculator() {
+  if (!biasInputGrid) return;
+  renderBiasInputs();
+  renderBiasLibrary();
+  updateBiasOutput();
+}
+
+function renderBiasInputs() {
+  biasInputGrid.replaceChildren();
+  BIAS_INPUTS.forEach((inputConfig) => {
+    const label = document.createElement("label");
+    label.innerHTML = `
+      <span>${inputConfig.label}</span>
+      <select data-bias-input="${inputConfig.id}">
+        <option value="">Ignore</option>
+        ${inputConfig.options.map(([value, text]) => `<option value="${value}">${text}</option>`).join("")}
+      </select>
+    `;
+    const select = label.querySelector("select");
+    select.value = biasState.inputs[inputConfig.id] ?? "";
+    select.addEventListener("change", () => {
+      biasState.inputs[inputConfig.id] = select.value;
+      saveBiasState();
+    });
+    biasInputGrid.append(label);
+  });
+}
+
+function renderBiasLibrary() {
+  biasLibraryRows.replaceChildren();
+  biasState.stats.forEach((stat, index) => {
+    const row = document.createElement("div");
+    row.className = "bias-library-row";
+    row.innerHTML = `
+      <input value="${escapeAttribute(stat.key)}" data-bias-stat="${index}" data-bias-field="key">
+      <input value="${escapeAttribute(stat.description)}" data-bias-stat="${index}" data-bias-field="description">
+      <input type="number" min="0.1" max="99.9" step="0.01" value="${Number(stat.bull).toFixed(2)}" data-bias-stat="${index}" data-bias-field="bull">
+      <input type="number" min="0" step="0.05" value="${Number(stat.weight).toFixed(2)}" data-bias-stat="${index}" data-bias-field="weight">
+      <input value="${escapeAttribute(stat.notes)}" data-bias-stat="${index}" data-bias-field="notes">
+      <button class="ghost-button" type="button" data-bias-delete="${index}">Delete</button>
+    `;
+    biasLibraryRows.append(row);
+  });
+
+  biasLibraryRows.querySelectorAll("[data-bias-field]").forEach((input) => {
+    input.addEventListener("input", updateBiasStatFromInput);
+  });
+  biasLibraryRows.querySelectorAll("[data-bias-delete]").forEach((button) => {
+    button.addEventListener("click", () => {
+      biasState.stats.splice(Number(button.dataset.biasDelete), 1);
+      saveBiasState();
+    });
+  });
+}
+
+function updateBiasStatFromInput(event) {
+  const input = event.currentTarget;
+  const stat = biasState.stats[Number(input.dataset.biasStat)];
+  if (!stat) return;
+  const field = input.dataset.biasField;
+  stat[field] = field === "bull" || field === "weight" ? Number(input.value) : input.value;
+  localStorage.setItem(BIAS_STORAGE_KEY, JSON.stringify(biasState));
+  updateBiasOutput();
+}
+
+function updateBiasOutput() {
+  const active = activeBiasDrivers();
+  const logOdds = sum(active.map((driver) => logit(driver.bull / 100) * driver.weight));
+  const longProbability = active.length ? logistic(logOdds) : 0.5;
+  const shortProbability = 1 - longProbability;
+  const longPercent = longProbability * 100;
+  const shortPercent = shortProbability * 100;
+  const score = longPercent - shortPercent;
+
+  biasOutput.longPercent.textContent = `${longPercent.toFixed(1)}%`;
+  biasOutput.shortPercent.textContent = `${shortPercent.toFixed(1)}%`;
+  biasOutput.score.textContent = score.toFixed(2);
+  biasOutput.driverCount.textContent = `${active.length} active ${active.length === 1 ? "driver" : "drivers"}`;
+  biasOutput.longLabel.textContent = biasLabel(longPercent);
+  biasOutput.shortLabel.textContent = biasLabel(shortPercent);
+  biasOutput.longPressure.style.width = `${longPercent}%`;
+  biasOutput.shortPressure.style.width = `${shortPercent}%`;
+  biasOutput.longPressureLabel.textContent = `${longPercent.toFixed(1)}%`;
+  biasOutput.shortPressureLabel.textContent = `${shortPercent.toFixed(1)}%`;
+  biasOutput.narrative.textContent = active.length
+    ? `${score >= 0 ? "Long" : "Short"} continuation has the stronger read by ${Math.abs(score).toFixed(1)} points.`
+    : "Waiting for active inputs. Start selecting conditions to estimate continuation bias.";
+  renderBiasDrivers(active);
+}
+
+function activeBiasDrivers() {
+  const statsByKey = new Map(biasState.stats.map((stat) => [stat.key, stat]));
+  return Object.values(biasState.inputs)
+    .filter(Boolean)
+    .map((key) => statsByKey.get(key))
+    .filter(Boolean)
+    .map((stat) => ({
+      ...stat,
+      bull: clamp(Number(stat.bull), 0.1, 99.9),
+      bear: 100 - clamp(Number(stat.bull), 0.1, 99.9),
+      weight: Math.max(0, Number(stat.weight) || 0),
+      impact: logit(clamp(Number(stat.bull), 0.1, 99.9) / 100) * Math.max(0, Number(stat.weight) || 0),
+    }));
+}
+
+function renderBiasDrivers(active) {
+  biasDriverRows.replaceChildren();
+  if (!active.length) {
+    const empty = document.createElement("div");
+    empty.className = "bias-driver-row empty";
+    empty.textContent = "No inputs active yet.";
+    biasDriverRows.append(empty);
+    return;
+  }
+
+  active.forEach((driver) => {
+    const row = document.createElement("div");
+    row.className = "bias-driver-row";
+    row.innerHTML = `
+      <span>${driver.description}</span>
+      <span>${driver.bull.toFixed(2)}%</span>
+      <span>${driver.bear.toFixed(2)}%</span>
+      <span>${driver.weight.toFixed(2)}</span>
+      <span class="${driver.impact >= 0 ? "profit" : "loss"}">${driver.impact >= 0 ? "+" : ""}${driver.impact.toFixed(3)}</span>
+    `;
+    biasDriverRows.append(row);
+  });
+}
+
+function resetBiasInputs() {
+  biasState.inputs = {};
+  saveBiasState();
+}
+
+function addBiasStatRow() {
+  biasState.stats.push({
+    key: `custom_${Date.now()}`,
+    description: "Custom condition",
+    bull: 50,
+    weight: 1,
+    notes: "Edit this row",
+  });
+  saveBiasState();
+}
+
+function restoreBiasDefaults() {
+  biasState = { inputs: {}, stats: structuredClone(DEFAULT_BIAS_STATS) };
+  saveBiasState();
+}
+
+function biasLabel(percent) {
+  if (percent >= 60) return "Strong";
+  if (percent >= 54) return "Leaning";
+  if (percent <= 40) return "Weak";
+  return "Neutral";
+}
+
+function logit(probability) {
+  const p = clamp(probability, 0.001, 0.999);
+  return Math.log(p / (1 - p));
+}
+
+function logistic(value) {
+  return 1 / (1 + Math.exp(-value));
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function escapeAttribute(value) {
+  return String(value ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 }
 
 function renderRows(items) {

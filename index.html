@@ -21,6 +21,7 @@
         <a href="#probabilities" data-section="probabilities">Probabilities</a>
         <a href="#stats-matrix" data-section="stats-matrix">Stats Matrix</a>
         <a href="#trade-plan" data-section="trade-plan">Trade Plan</a>
+        <a href="#bias-calculator" data-section="bias-calculator">NQ Bias</a>
       </nav>
     </aside>
 
@@ -663,6 +664,110 @@
           <div class="scorecard-actions">
             <button class="primary-button" id="savePlanButton" type="button">Save Game Plan</button>
             <button class="danger-button" id="clearPlanButton" type="button">Clear Plan</button>
+          </div>
+        </section>
+      </section>
+
+      <section class="app-section" data-section-panel="bias-calculator" id="bias-calculator">
+        <section class="bias-hero-grid">
+          <div class="bias-hero-panel">
+            <h2>NQ Directional Bias Calculator</h2>
+            <p>Real-time long vs short continuation model for opening-drive and auction-market variables. Plug in conditions like IBH30 first, ONH first, outside previous day value/range, 15/30/60 min opening candle, weekday, and your own custom stats.</p>
+            <div class="bias-pill-row">
+              <span>Editable presets from your screenshots</span>
+              <span>Weighted log-odds model</span>
+              <span>Local save in browser</span>
+              <span>Add unlimited custom conditions</span>
+            </div>
+          </div>
+
+          <div class="bias-output-panel">
+            <h3>Model Output</h3>
+            <div class="bias-output-grid">
+              <div class="bias-output-card">
+                <span>Long Continuation</span>
+                <strong id="biasLongPercent">50.0%</strong>
+                <small id="biasLongLabel">Neutral</small>
+              </div>
+              <div class="bias-output-card">
+                <span>Short Continuation</span>
+                <strong id="biasShortPercent">50.0%</strong>
+                <small id="biasShortLabel">Neutral</small>
+              </div>
+              <div class="bias-output-card">
+                <span>Bias Score</span>
+                <strong id="biasScore">0.00</strong>
+                <small id="biasDriverCount">0 active drivers</small>
+              </div>
+            </div>
+
+            <div class="pressure-row">
+              <div><span>Long pressure</span><b id="biasLongPressureLabel">50.0%</b></div>
+              <div class="pressure-track"><span id="biasLongPressure"></span></div>
+            </div>
+            <div class="pressure-row">
+              <div><span>Short pressure</span><b id="biasShortPressureLabel">50.0%</b></div>
+              <div class="pressure-track short-track"><span id="biasShortPressure"></span></div>
+            </div>
+            <p id="biasNarrative">Waiting for active inputs. Start selecting conditions to estimate continuation bias.</p>
+          </div>
+        </section>
+
+        <section class="bias-workspace-grid">
+          <div class="bias-panel">
+            <h3>Real-time Market Inputs</h3>
+            <div class="bias-input-grid" id="biasInputGrid"></div>
+            <div class="bias-actions">
+              <button class="primary-button" id="biasRecalculateButton" type="button">Recalculate</button>
+              <button class="ghost-button" id="biasSaveButton" type="button">Save Settings</button>
+              <button class="ghost-button" id="biasResetInputsButton" type="button">Reset Inputs</button>
+            </div>
+          </div>
+
+          <div class="bias-panel">
+            <h3>How The Estimate Works</h3>
+            <div class="bias-method-note">
+              <p>Each active condition contributes a bull probability and a weight. The model converts that bull probability into log-odds, multiplies by the weight, sums the active signals, and converts the result back into a long/short probability.</p>
+              <p>This is decision support, not a guaranteed true probability, because many market variables are correlated. Best use: repeatable prep dashboard, then validate with your own journal and sample size.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="bias-panel">
+          <h3>Active Drivers</h3>
+          <div class="bias-driver-table">
+            <div class="bias-driver-head">
+              <span>Condition</span>
+              <span>Bull %</span>
+              <span>Bear %</span>
+              <span>Weight</span>
+              <span>Impact</span>
+            </div>
+            <div id="biasDriverRows"></div>
+          </div>
+        </section>
+
+        <section class="bias-panel">
+          <div class="bias-library-header">
+            <div>
+              <h3>Stats Library</h3>
+              <p>Edit any number, weight, or label. Add your own custom rows below.</p>
+            </div>
+            <div class="bias-actions">
+              <button class="ghost-button" id="biasAddStatButton" type="button">Add Custom Stat Row</button>
+              <button class="ghost-button" id="biasRestoreButton" type="button">Restore Defaults</button>
+            </div>
+          </div>
+          <div class="bias-library-table">
+            <div class="bias-library-head">
+              <span>Key</span>
+              <span>Description</span>
+              <span>Bull %</span>
+              <span>Weight</span>
+              <span>Source / Notes</span>
+              <span></span>
+            </div>
+            <div id="biasLibraryRows"></div>
           </div>
         </section>
       </section>

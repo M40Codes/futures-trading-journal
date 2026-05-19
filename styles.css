@@ -190,6 +190,9 @@ p {
 .scorecard-panel,
 .screenshot-panel,
 .csv-import-panel,
+.bias-hero-panel,
+.bias-output-panel,
+.bias-panel,
 .journal-form,
 .journal-panel {
   border: 1px solid var(--line);
@@ -1051,6 +1054,201 @@ button:disabled {
   width: auto;
 }
 
+.bias-hero-grid,
+.bias-workspace-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(360px, 0.95fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.bias-hero-panel,
+.bias-output-panel,
+.bias-panel {
+  padding: 18px;
+}
+
+.bias-hero-panel h2 {
+  max-width: 840px;
+  margin-bottom: 12px;
+  font-size: clamp(2rem, 4vw, 3.35rem);
+  letter-spacing: 0;
+}
+
+.bias-hero-panel p,
+.bias-method-note p,
+.bias-panel > p,
+.bias-library-header p,
+#biasNarrative {
+  color: #b8c7e6;
+  line-height: 1.55;
+}
+
+.bias-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.bias-pill-row span {
+  border: 1px solid rgba(96, 165, 250, 0.22);
+  border-radius: 999px;
+  padding: 9px 14px;
+  background: rgba(96, 165, 250, 0.12);
+  color: #c7d7ff;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.bias-output-panel h3,
+.bias-panel h3 {
+  margin-bottom: 14px;
+}
+
+.bias-output-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.bias-output-card {
+  border: 1px solid rgba(96, 165, 250, 0.24);
+  border-radius: 8px;
+  padding: 14px;
+  background: rgba(30, 41, 79, 0.42);
+}
+
+.bias-output-card span,
+.bias-driver-head,
+.bias-library-head {
+  color: #b7c7ef;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.bias-output-card strong {
+  display: block;
+  margin-top: 10px;
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  line-height: 1;
+}
+
+.bias-output-card small {
+  display: block;
+  margin-top: 8px;
+  color: #b8c7e6;
+  font-weight: 800;
+}
+
+.pressure-row {
+  margin-top: 12px;
+}
+
+.pressure-row > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 7px;
+  color: #b8c7e6;
+  font-size: 0.82rem;
+}
+
+.pressure-track {
+  height: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(96, 165, 250, 0.26);
+  border-radius: 999px;
+  background: #101a32;
+}
+
+.pressure-track span {
+  display: block;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(135deg, var(--win), var(--accent));
+}
+
+.short-track span {
+  background: linear-gradient(135deg, var(--loss), #ef4444);
+}
+
+.bias-input-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.bias-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.bias-actions .primary-button,
+.bias-actions .ghost-button {
+  width: auto;
+}
+
+.bias-panel .bias-actions {
+  margin-top: 14px;
+}
+
+.bias-method-note {
+  border: 1px dashed rgba(96, 165, 250, 0.28);
+  border-radius: 8px;
+  padding: 14px;
+  background: rgba(96, 165, 250, 0.06);
+}
+
+.bias-driver-table,
+.bias-library-table {
+  overflow-x: auto;
+}
+
+.bias-driver-head,
+.bias-driver-row {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.4fr) repeat(4, minmax(110px, 0.6fr));
+  gap: 12px;
+  align-items: center;
+  min-width: 840px;
+  border-bottom: 1px solid var(--line);
+  padding: 12px 10px;
+}
+
+.bias-driver-row.empty {
+  display: block;
+  min-width: 0;
+  color: #b8c7e6;
+  font-size: 0.84rem;
+}
+
+.bias-library-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.bias-library-head,
+.bias-library-row {
+  display: grid;
+  grid-template-columns: minmax(190px, 1fr) minmax(230px, 1fr) minmax(110px, 0.5fr) minmax(110px, 0.5fr) minmax(230px, 1fr) 90px;
+  gap: 12px;
+  align-items: center;
+  min-width: 1080px;
+  border-bottom: 1px solid var(--line);
+  padding: 10px;
+}
+
+.bias-library-row input {
+  min-height: 38px;
+}
+
 .widget-header {
   justify-content: space-between;
   margin-bottom: 16px;
@@ -1444,6 +1642,8 @@ td {
   .market-context-grid,
   .market-live-panel,
   .in-play-grid,
+  .bias-hero-grid,
+  .bias-workspace-grid,
   .plan-grid,
   .wide-plan-grid,
   .scenario-grid,
@@ -1510,6 +1710,10 @@ td {
   .market-context-grid,
   .market-live-panel,
   .in-play-grid,
+  .bias-hero-grid,
+  .bias-workspace-grid,
+  .bias-input-grid,
+  .bias-output-grid,
   .plan-grid,
   .wide-plan-grid,
   .scenario-grid,
@@ -1522,6 +1726,7 @@ td {
   }
 
   .scorecard-header,
+  .bias-library-header,
   .connector-actions,
   .scorecard-actions {
     flex-direction: column;
