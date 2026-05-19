@@ -126,6 +126,7 @@ const lightboxCaption = document.querySelector("#lightboxCaption");
 const lightboxCloseButton = document.querySelector("#lightboxCloseButton");
 const liveClock = document.querySelector("#liveClock");
 const focusTimer = document.querySelector("#focusTimer");
+const sessionNotice = document.querySelector("#sessionNotice");
 const breakAlert = document.querySelector("#breakAlert");
 const dismissBreakButton = document.querySelector("#dismissBreakButton");
 const stopTimerButton = document.querySelector("#stopTimerButton");
@@ -359,6 +360,14 @@ const DEFAULT_BIAS_STATS = [
   { key: "prior_low", description: "Prior low first", bull: 38.00, weight: 0.85, notes: "Editable structure stat" },
 ];
 
+const SESSION_WINDOWS = [
+  { name: "Globex", open: 18 * 60, close: 17 * 60 },
+  { name: "Asia", open: 20 * 60, close: 24 * 60 },
+  { name: "London", open: 3 * 60, close: 8 * 60 + 30 },
+  { name: "NY AM", open: 9 * 60 + 30, close: 12 * 60 },
+  { name: "NY PM", open: 13 * 60, close: 16 * 60 },
+];
+
 let trades = loadTrades();
 let scorecards = loadScorecard();
 let screenshots = loadScreenshots();
@@ -372,6 +381,7 @@ let focusStartedAt = Date.now();
 let focusElapsedBeforePause = 0;
 let timerRunning = true;
 let lastBreakHour = 0;
+let lastSessionEventKey = "";
 
 const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -495,7 +505,7 @@ sectionLinks.forEach((link) => {
 document.querySelectorAll("[data-section-jump]").forEach((button) => {
   button.addEventListener("click", () => showSection(button.dataset.sectionJump));
 });
-showSection(window.location.hash.replace("#", "") || "trade-plan");
+showSection(window.location.hash.replace("#", "") || "dashboard");
 
 seedButton.addEventListener("click", () => {
   trades = sampleTrades();
@@ -1550,6 +1560,7 @@ function clearTradePlan() {
 function updateClockBar() {
   if (!liveClock || !focusTimer) return;
   const now = new Date();
+  const nyParts = newYorkDateParts(now);
   liveClock.textContent = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/New_York",
     hour: "numeric",
@@ -1571,6 +1582,92 @@ function updateClockBar() {
     lastBreakHour = completedHour;
     showBreakAlert(completedHour);
   }
+
+  updateSessionNotice(nyParts);
+}
+
+function newYorkDateParts(date) {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    weekday: "short",
+    hour: "numeric",
+    minute: "numeric",
+    second: "numeric",
+    hour12: false,
+  }).formatToParts(date).map((part) => [part.type, part.value]));
+
+  return {
+    weekday: parts.weekday,
+    hour: Number(parts.hour),
+    minute: Number(parts.minute),
+    second: Number(parts.second),
+  };
+}
+
+function updateSessionNotice({ weekday, hour, minute, second }) {
+  if (!sessionNotice) return;
+  const minuteOfDay = hour * 60 + minute;
+  const openSessions = SESSION_WINDOWS.filter((session) => isSessionOpen(session, minuteOfDay));
+  const nextEvent = nextSessionEvent(minuteOfDay);
+  const openText = openSessions.length
+    ? `Open now: ${openSessions.map((session) => session.name).join(" + ")}`
+    : "No major session open";
+
+  sessionNotice.textContent = `${openText}. Next: ${nextEvent.name} ${nextEvent.type} in ${formatMinutesUntil(nextEvent.minutesUntil)}.`;
+
+  if (second <= 1) {
+    const eventNow = sessionEventAt(minuteOfDay);
+    const eventKey = eventNow ? `${weekday}-${hour}-${minute}-${eventNow.name}-${eventNow.type}` : "";
+    if (eventNow && eventKey !== lastSessionEventKey) {
+      lastSessionEventKey = eventKey;
+      showSessionAlert(eventNow);
+    }
+  }
+}
+
+function isSessionOpen(session, minuteOfDay) {
+  if (session.open < session.close) {
+    return minuteOfDay >= session.open && minuteOfDay < session.close;
+  }
+  return minuteOfDay >= session.open || minuteOfDay < session.close;
+}
+
+function nextSessionEvent(minuteOfDay) {
+  const events = SESSION_WINDOWS.flatMap((session) => [
+    { name: session.name, type: "opens", minute: session.open },
+    { name: session.name, type: "closes", minute: session.close },
+  ]);
+
+  return events
+    .map((event) => ({
+      ...event,
+      minutesUntil: event.minute >= minuteOfDay ? event.minute - minuteOfDay : 1440 - minuteOfDay + event.minute,
+    }))
+    .filter((event) => event.minutesUntil > 0)
+    .sort((a, b) => a.minutesUntil - b.minutesUntil)[0];
+}
+
+function sessionEventAt(minuteOfDay) {
+  return SESSION_WINDOWS.flatMap((session) => [
+    { name: session.name, type: "open", minute: session.open },
+    { name: session.name, type: "close", minute: session.close },
+  ]).find((event) => event.minute === minuteOfDay);
+}
+
+function showSessionAlert(event) {
+  sessionNotice.textContent = `${event.name} session ${event.type === "open" ? "is opening now" : "is closing now"}.`;
+  sessionNotice.classList.add("active");
+  playBreakSound();
+  window.setTimeout(() => sessionNotice.classList.remove("active"), 12000);
+}
+
+function formatMinutesUntil(minutes) {
+  if (minutes >= 60) {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours}h ${mins}m`;
+  }
+  return `${minutes}m`;
 }
 
 function currentFocusElapsed() {
