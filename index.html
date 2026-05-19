@@ -14,19 +14,19 @@
     <aside class="sidebar" aria-label="Journal navigation">
       <div class="brand-mark">FJ</div>
       <nav>
-        <a class="active" href="#dashboard" data-section="dashboard">Dashboard</a>
+        <a class="active" href="#trade-plan" data-section="trade-plan">Trade Plan</a>
+        <a href="#dashboard" data-section="dashboard">Dashboard</a>
         <a href="#trades" data-section="trades">Trades</a>
         <a href="#playbook" data-section="playbook">Playbook</a>
         <a href="#reports" data-section="reports">Reports</a>
         <a href="#probabilities" data-section="probabilities">Probabilities</a>
         <a href="#stats-matrix" data-section="stats-matrix">Stats Matrix</a>
-        <a href="#trade-plan" data-section="trade-plan">Trade Plan</a>
         <a href="#bias-calculator" data-section="bias-calculator">NQ Bias</a>
       </nav>
     </aside>
 
     <main class="app-shell">
-      <section class="app-section active-section" data-section-panel="dashboard" id="dashboard">
+      <section class="app-section" data-section-panel="dashboard" id="dashboard">
       <section class="topbar">
         <div>
           <p class="eyebrow">Futures Journal</p>
@@ -128,38 +128,45 @@
         </section>
       </section>
 
-      <section class="connector-panel">
-        <div class="connector-copy">
-          <p class="eyebrow">Broker Sync</p>
-          <h2>Tradovate Connector</h2>
-          <p id="tradovateStatus">Connector not checked yet.</p>
+      <section class="rr-validator-panel">
+        <div class="rr-validator-copy">
+          <p class="eyebrow">Step 4</p>
+          <h2>2:1 Risk-to-Reward Validator</h2>
+          <p>The distance from entry to the Master Target must be at least twice the distance from entry to the structural stop. If probability is high but R:R is below 2:1, wait for a deeper retracement or pass.</p>
         </div>
 
-        <div class="connector-fields">
+        <div class="rr-input-grid">
           <label>
-            <span>Environment</span>
-            <select id="tradovateEnvironment">
-              <option value="demo">Demo</option>
-              <option value="live">Live</option>
-            </select>
+            <span>Entry Price</span>
+            <input id="rrEntryPrice" type="number" step="0.01" placeholder="29189.25">
           </label>
           <label>
-            <span>Username</span>
-            <input id="tradovateUsername" autocomplete="username" placeholder="Optional if set in .env">
+            <span>Master Target</span>
+            <input id="rrTargetPrice" type="number" step="0.01" placeholder="29323.25">
           </label>
           <label>
-            <span>Password</span>
-            <input id="tradovatePassword" type="password" autocomplete="current-password" placeholder="Optional if set in .env">
-          </label>
-          <label>
-            <span>Account ID</span>
-            <input id="tradovateAccountId" placeholder="Optional account filter">
+            <span>Safe Stop</span>
+            <input id="rrStopPrice" type="number" step="0.01" placeholder="29086.50">
           </label>
         </div>
 
-        <div class="connector-actions">
-          <button class="ghost-button" id="tradovateConnectButton" type="button">Connect</button>
-          <button class="primary-button" id="tradovateSyncButton" type="button">Sync Trades</button>
+        <div class="rr-output-grid">
+          <article>
+            <span>Reward Distance</span>
+            <strong id="rrRewardDistance">0.00 pts</strong>
+          </article>
+          <article>
+            <span>Risk Distance</span>
+            <strong id="rrRiskDistance">0.00 pts</strong>
+          </article>
+          <article>
+            <span>R:R Ratio</span>
+            <strong id="rrRatio">0.00R</strong>
+          </article>
+          <article class="rr-verdict-card" id="rrVerdictCard">
+            <span>Execution Gate</span>
+            <strong id="rrVerdict">Waiting for prices</strong>
+          </article>
         </div>
       </section>
 
@@ -281,20 +288,28 @@
             <input id="screenshotDate" type="date">
           </label>
           <label class="file-picker">
-            <span>Screenshot</span>
+            <span>Execution Screenshot</span>
             <input id="screenshotInput" type="file" accept="image/*">
           </label>
           <button class="danger-button" id="clearScreenshotButton" type="button">Clear Image</button>
+          <label class="file-picker">
+            <span>TradingView Chart</span>
+            <input id="contextScreenshotInput" type="file" accept="image/*">
+          </label>
+          <button class="danger-button" id="clearContextScreenshotButton" type="button">Clear TradingView</button>
         </div>
 
         <figure class="screenshot-preview" id="screenshotPreview">
           <img id="screenshotImage" alt="Trade screenshot preview">
-          <figcaption id="screenshotCaption">No screenshot saved for this day.</figcaption>
+          <figcaption id="screenshotCaption">No execution screenshot saved for this day.</figcaption>
+        </figure>
+        <figure class="screenshot-preview" id="contextScreenshotPreview">
+          <img id="contextScreenshotImage" alt="TradingView chart preview">
+          <figcaption id="contextScreenshotCaption">No TradingView chart saved for this day.</figcaption>
         </figure>
       </section>
-      </section>
 
-      <section class="app-section" data-section-panel="trades" id="trades">
+      <section class="dashboard-trades-panel">
       <section class="workspace">
         <div class="trade-entry-column">
         <section class="csv-import-panel">
@@ -336,14 +351,8 @@
             <label>
               <span>Contract</span>
               <select id="symbol" name="symbol" required>
-                <option value="ES">ES - E-mini S&P 500</option>
-                <option value="MES">MES - Micro S&P 500</option>
-                <option value="NQ">NQ - E-mini Nasdaq</option>
                 <option value="MNQ">MNQ - Micro Nasdaq</option>
-                <option value="YM">YM - E-mini Dow</option>
-                <option value="RTY">RTY - Russell 2000</option>
-                <option value="CL">CL - Crude Oil</option>
-                <option value="GC">GC - Gold</option>
+                <option value="MES">MES - Micro S&P 500</option>
               </select>
             </label>
             <label>
@@ -455,6 +464,52 @@
           </div>
         </section>
       </section>
+
+      <section class="connector-panel dashboard-connector-panel">
+        <div class="connector-copy">
+          <p class="eyebrow">Broker Sync</p>
+          <h2>Tradovate Connector</h2>
+          <p id="tradovateStatus">Connector not checked yet.</p>
+        </div>
+
+        <div class="connector-fields">
+          <label>
+            <span>Environment</span>
+            <select id="tradovateEnvironment">
+              <option value="demo">Demo</option>
+              <option value="live">Live</option>
+            </select>
+          </label>
+          <label>
+            <span>Username</span>
+            <input id="tradovateUsername" autocomplete="username" placeholder="Optional if set in .env">
+          </label>
+          <label>
+            <span>Password</span>
+            <input id="tradovatePassword" type="password" autocomplete="current-password" placeholder="Optional if set in .env">
+          </label>
+          <label>
+            <span>Account ID</span>
+            <input id="tradovateAccountId" placeholder="Optional account filter">
+          </label>
+        </div>
+
+        <div class="connector-actions">
+          <button class="ghost-button" id="tradovateConnectButton" type="button">Connect</button>
+          <button class="primary-button" id="tradovateSyncButton" type="button">Sync Trades</button>
+        </div>
+      </section>
+      </section>
+
+      <section class="app-section" data-section-panel="trades" id="trades">
+        <section class="section-header-panel">
+          <div>
+            <p class="eyebrow">Trades</p>
+            <h2>Trades moved to Dashboard</h2>
+            <p>The trade entry form and table now live at the bottom of the Dashboard after Trade Screenshot.</p>
+          </div>
+          <button class="primary-button save-review-button" type="button" data-section-jump="dashboard">Open Dashboard</button>
+        </section>
       </section>
 
       <section class="app-section" data-section-panel="playbook" id="playbook">
@@ -598,7 +653,7 @@
         </section>
       </section>
 
-      <section class="app-section" data-section-panel="trade-plan" id="trade-plan">
+      <section class="app-section active-section" data-section-panel="trade-plan" id="trade-plan">
         <section class="section-header-panel">
           <div>
             <p class="eyebrow">Pre-Open</p>
@@ -850,6 +905,7 @@
       <strong id="focusTimer">00:00</strong>
     </div>
     <p id="breakAlert">Break alert armed. You will get a reminder every hour.</p>
+    <button class="ghost-button" id="stopTimerButton" type="button">Stop Timer</button>
     <button class="ghost-button" id="dismissBreakButton" type="button">Dismiss</button>
   </div>
 

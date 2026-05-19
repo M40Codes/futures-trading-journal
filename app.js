@@ -44,6 +44,10 @@ const screenshotInput = document.querySelector("#screenshotInput");
 const screenshotImage = document.querySelector("#screenshotImage");
 const screenshotCaption = document.querySelector("#screenshotCaption");
 const clearScreenshotButton = document.querySelector("#clearScreenshotButton");
+const contextScreenshotInput = document.querySelector("#contextScreenshotInput");
+const contextScreenshotImage = document.querySelector("#contextScreenshotImage");
+const contextScreenshotCaption = document.querySelector("#contextScreenshotCaption");
+const clearContextScreenshotButton = document.querySelector("#clearContextScreenshotButton");
 const calendarMonthLabel = document.querySelector("#calendarMonthLabel");
 const prevMonthButton = document.querySelector("#prevMonthButton");
 const nextMonthButton = document.querySelector("#nextMonthButton");
@@ -61,6 +65,18 @@ const probabilityRows = document.querySelector("#probabilityRows");
 const probabilityChartGrid = document.querySelector("#probabilityChartGrid");
 const playbookGrid = document.querySelector("#playbookGrid");
 const reportsGrid = document.querySelector("#reportsGrid");
+const rrInputs = {
+  entry: document.querySelector("#rrEntryPrice"),
+  target: document.querySelector("#rrTargetPrice"),
+  stop: document.querySelector("#rrStopPrice"),
+};
+const rrOutput = {
+  reward: document.querySelector("#rrRewardDistance"),
+  risk: document.querySelector("#rrRiskDistance"),
+  ratio: document.querySelector("#rrRatio"),
+  verdict: document.querySelector("#rrVerdict"),
+  card: document.querySelector("#rrVerdictCard"),
+};
 const statsMatrix = document.querySelector("#statsMatrix");
 const matrixSummary = document.querySelector("#matrixSummary");
 const inPlayGrid = document.querySelector("#inPlayGrid");
@@ -112,6 +128,7 @@ const liveClock = document.querySelector("#liveClock");
 const focusTimer = document.querySelector("#focusTimer");
 const breakAlert = document.querySelector("#breakAlert");
 const dismissBreakButton = document.querySelector("#dismissBreakButton");
+const stopTimerButton = document.querySelector("#stopTimerButton");
 const biasInputGrid = document.querySelector("#biasInputGrid");
 const biasDriverRows = document.querySelector("#biasDriverRows");
 const biasLibraryRows = document.querySelector("#biasLibraryRows");
@@ -352,6 +369,8 @@ let calendarDate = new Date();
 let serverSyncReady = false;
 let saveTimer = null;
 let focusStartedAt = Date.now();
+let focusElapsedBeforePause = 0;
+let timerRunning = true;
 let lastBreakHour = 0;
 
 const currency = new Intl.NumberFormat("en-US", {
@@ -374,6 +393,7 @@ renderScorecard();
 renderScreenshot();
 renderTradePlan();
 renderBiasCalculator();
+renderRrValidator();
 render();
 updateClockBar();
 window.setInterval(updateClockBar, 1000);
@@ -421,6 +441,9 @@ Object.values(targetFilterInputs).forEach((input) => {
   input.addEventListener("input", renderStatsMatrix);
   input.addEventListener("change", renderStatsMatrix);
 });
+Object.values(rrInputs).forEach((input) => {
+  input.addEventListener("input", renderRrValidator);
+});
 planInputs.date.addEventListener("change", renderTradePlan);
 Object.entries(planInputs).forEach(([key, input]) => {
   if (["date", "chartInput", "chartImage", "chartCaption"].includes(key)) return;
@@ -437,6 +460,7 @@ imageLightbox.addEventListener("click", (event) => {
   if (event.target === imageLightbox) closeImageLightbox();
 });
 dismissBreakButton.addEventListener("click", dismissBreakAlert);
+stopTimerButton.addEventListener("click", toggleFocusTimer);
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeImageLightbox();
 });
@@ -451,8 +475,12 @@ screenshotDate.addEventListener("change", () => {
   renderScreenshot();
   renderDailyGrid(filteredTrades());
 });
-screenshotInput.addEventListener("change", saveScreenshotForDate);
-clearScreenshotButton.addEventListener("click", clearScreenshotForDate);
+screenshotInput.addEventListener("change", (event) => saveScreenshotForDate(event, "execution"));
+contextScreenshotInput.addEventListener("change", (event) => saveScreenshotForDate(event, "context"));
+screenshotImage.addEventListener("click", () => openImageLightbox(screenshotImage.src, screenshotCaption.textContent));
+contextScreenshotImage.addEventListener("click", () => openImageLightbox(contextScreenshotImage.src, contextScreenshotCaption.textContent));
+clearScreenshotButton.addEventListener("click", () => clearScreenshotForDate("execution"));
+clearContextScreenshotButton.addEventListener("click", () => clearScreenshotForDate("context"));
 prevMonthButton.addEventListener("click", () => changeCalendarMonth(-1));
 nextMonthButton.addEventListener("click", () => changeCalendarMonth(1));
 tradovateConnectButton.addEventListener("click", connectTradovate);
@@ -464,7 +492,10 @@ sectionLinks.forEach((link) => {
     showSection(link.dataset.section);
   });
 });
-showSection(window.location.hash.replace("#", "") || "dashboard");
+document.querySelectorAll("[data-section-jump]").forEach((button) => {
+  button.addEventListener("click", () => showSection(button.dataset.sectionJump));
+});
+showSection(window.location.hash.replace("#", "") || "trade-plan");
 
 seedButton.addEventListener("click", () => {
   trades = sampleTrades();
@@ -750,27 +781,35 @@ async function saveJournalToServer() {
   }
 }
 
-async function saveScreenshotForDate(event) {
+async function saveScreenshotForDate(event, type = "execution") {
   const file = event.target.files?.[0];
   const date = screenshotDate.value;
   if (!file || !date) return;
 
   const dataUrl = await resizeImage(file, 1400, 0.82);
-  screenshots[date] = {
+  const dailyScreenshots = normalizeDailyScreenshots(screenshots[date]);
+  dailyScreenshots[type] = {
     name: file.name,
     savedAt: new Date().toISOString(),
     dataUrl,
   };
+  screenshots[date] = dailyScreenshots;
   saveScreenshots();
   renderScreenshot();
   renderDailyGrid(filteredTrades());
-  screenshotInput.value = "";
+  event.target.value = "";
 }
 
-function clearScreenshotForDate() {
+function clearScreenshotForDate(type = "execution") {
   const date = screenshotDate.value;
   if (!date || !screenshots[date]) return;
-  delete screenshots[date];
+  const dailyScreenshots = normalizeDailyScreenshots(screenshots[date]);
+  delete dailyScreenshots[type];
+  if (!dailyScreenshots.execution && !dailyScreenshots.context) {
+    delete screenshots[date];
+  } else {
+    screenshots[date] = dailyScreenshots;
+  }
   saveScreenshots();
   renderScreenshot();
   renderDailyGrid(filteredTrades());
@@ -778,18 +817,44 @@ function clearScreenshotForDate() {
 
 function renderScreenshot() {
   const date = screenshotDate.value;
-  const screenshot = screenshots[date];
+  const dailyScreenshots = normalizeDailyScreenshots(screenshots[date]);
 
-  if (!screenshot) {
-    screenshotImage.removeAttribute("src");
-    screenshotImage.style.display = "none";
-    screenshotCaption.textContent = "No screenshot saved for this day.";
+  renderScreenshotSlot({
+    date,
+    screenshot: dailyScreenshots.execution,
+    image: screenshotImage,
+    caption: screenshotCaption,
+    emptyText: "No execution screenshot saved for this day.",
+    label: "Execution screenshot",
+  });
+  renderScreenshotSlot({
+    date,
+    screenshot: dailyScreenshots.context,
+    image: contextScreenshotImage,
+    caption: contextScreenshotCaption,
+    emptyText: "No TradingView chart saved for this day.",
+    label: "TradingView chart",
+  });
+}
+
+function normalizeDailyScreenshots(value) {
+  if (!value) return {};
+  if (value.dataUrl) return { execution: value };
+  return value;
+}
+
+function renderScreenshotSlot({ date, screenshot, image, caption, emptyText, label }) {
+  if (!screenshot?.dataUrl) {
+    image.removeAttribute("src");
+    image.style.display = "none";
+    caption.textContent = emptyText;
     return;
   }
 
-  screenshotImage.src = screenshot.dataUrl;
-  screenshotImage.style.display = "block";
-  screenshotCaption.textContent = `${screenshot.name} saved for ${dateFormatter.format(new Date(`${date}T00:00:00`))}`;
+  image.src = screenshot.dataUrl;
+  image.style.display = "block";
+  image.title = "Click to enlarge";
+  caption.textContent = `${label}: ${screenshot.name} saved for ${dateFormatter.format(new Date(`${date}T00:00:00`))}`;
 }
 
 function resizeImage(file, maxWidth, quality) {
@@ -1398,6 +1463,36 @@ function saveMarketContext() {
   renderProbabilities(trades);
 }
 
+function renderRrValidator() {
+  if (!rrOutput.reward) return;
+  const entry = Number(rrInputs.entry.value);
+  const target = Number(rrInputs.target.value);
+  const stop = Number(rrInputs.stop.value);
+  const hasPrices = [entry, target, stop].every((value) => Number.isFinite(value) && value > 0);
+
+  if (!hasPrices) {
+    rrOutput.reward.textContent = "0.00 pts";
+    rrOutput.risk.textContent = "0.00 pts";
+    rrOutput.ratio.textContent = "0.00R";
+    rrOutput.verdict.textContent = "Waiting for prices";
+    rrOutput.card.className = "rr-verdict-card";
+    return;
+  }
+
+  const reward = Math.abs(target - entry);
+  const risk = Math.abs(entry - stop);
+  const ratio = risk > 0 ? reward / risk : 0;
+  const passes = risk > 0 && reward >= 2 * risk;
+
+  rrOutput.reward.textContent = `${reward.toFixed(2)} pts`;
+  rrOutput.risk.textContent = `${risk.toFixed(2)} pts`;
+  rrOutput.ratio.textContent = `${ratio.toFixed(2)}R`;
+  rrOutput.verdict.textContent = passes
+    ? "Pass: 2:1+ execution"
+    : "Fail: wait or pass";
+  rrOutput.card.className = `rr-verdict-card ${passes ? "rr-pass" : "rr-fail"}`;
+}
+
 function selectedPlanDate() {
   return planInputs.date.value || todayKey();
 }
@@ -1463,7 +1558,7 @@ function updateClockBar() {
     hour12: true,
   }).format(now);
 
-  const elapsedSeconds = Math.floor((Date.now() - focusStartedAt) / 1000);
+  const elapsedSeconds = Math.floor(currentFocusElapsed() / 1000);
   const hours = Math.floor(elapsedSeconds / 3600);
   const minutes = Math.floor((elapsedSeconds % 3600) / 60);
   const seconds = elapsedSeconds % 60;
@@ -1478,17 +1573,65 @@ function updateClockBar() {
   }
 }
 
+function currentFocusElapsed() {
+  return focusElapsedBeforePause + (timerRunning ? Date.now() - focusStartedAt : 0);
+}
+
 function showBreakAlert(hour) {
   if (!breakAlert) return;
   breakAlert.textContent = `${hour} hour${hour === 1 ? "" : "s"} focused. Stand up, reset your eyes, review risk, then continue.`;
   breakAlert.classList.add("active");
+  playBreakSound();
 }
 
 function dismissBreakAlert() {
   breakAlert.classList.remove("active");
   breakAlert.textContent = "Break alert armed. You will get a reminder every hour.";
+  focusElapsedBeforePause = 0;
   focusStartedAt = Date.now();
+  timerRunning = true;
   lastBreakHour = 0;
+  stopTimerButton.textContent = "Stop Timer";
+}
+
+function toggleFocusTimer() {
+  if (timerRunning) {
+    focusElapsedBeforePause = currentFocusElapsed();
+    timerRunning = false;
+    stopTimerButton.textContent = "Start Timer";
+    breakAlert.textContent = "Timer paused. Break alerts are paused too.";
+    breakAlert.classList.remove("active");
+    return;
+  }
+
+  focusStartedAt = Date.now();
+  timerRunning = true;
+  stopTimerButton.textContent = "Stop Timer";
+  breakAlert.textContent = "Break alert armed. You will get a reminder every hour.";
+}
+
+function playBreakSound() {
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+    const audioContext = new AudioContextClass();
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(660, audioContext.currentTime);
+    oscillator.frequency.setValueAtTime(880, audioContext.currentTime + 0.18);
+    gain.gain.setValueAtTime(0.0001, audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.18, audioContext.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.55);
+
+    oscillator.connect(gain);
+    gain.connect(audioContext.destination);
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + 0.58);
+  } catch {
+    // Browser audio may be blocked until the page receives a user gesture.
+  }
 }
 
 async function savePlanChart(event) {
