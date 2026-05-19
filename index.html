@@ -816,6 +816,14 @@
     </tr>
   </template>
 
+  <div class="image-lightbox hidden" id="imageLightbox" role="dialog" aria-modal="true" aria-label="Expanded chart image">
+    <button class="lightbox-close" id="lightboxCloseButton" type="button" aria-label="Close expanded image">Close</button>
+    <figure>
+      <img id="lightboxImage" alt="Expanded chart">
+      <figcaption id="lightboxCaption"></figcaption>
+    </figure>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>

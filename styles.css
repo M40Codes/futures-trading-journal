@@ -980,6 +980,65 @@ button:disabled {
 
 .plan-chart-preview img {
   max-height: 520px;
+  cursor: zoom-in;
+}
+
+.image-lightbox {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(2, 6, 14, 0.90);
+  backdrop-filter: blur(10px);
+}
+
+.image-lightbox figure {
+  width: min(96vw, 1500px);
+  max-height: 92vh;
+  margin: 0;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 8px;
+  overflow: auto;
+  background: #030712;
+  box-shadow: var(--shadow);
+}
+
+.image-lightbox img {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 60vh;
+  object-fit: contain;
+}
+
+.image-lightbox figcaption {
+  position: sticky;
+  bottom: 0;
+  padding: 12px 14px;
+  background: rgba(3, 7, 18, 0.88);
+  color: #dbeafe;
+  font-size: 0.88rem;
+  font-weight: 900;
+}
+
+.lightbox-close {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 51;
+  min-height: 40px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 7px;
+  padding: 0 14px;
+  background: #111827;
+  color: var(--ink);
+  font-weight: 900;
+}
+
+body.lightbox-open {
+  overflow: hidden;
 }
 
 .market-context-panel h3 {

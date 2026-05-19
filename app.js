@@ -99,6 +99,10 @@ const savePlanButton = document.querySelector("#savePlanButton");
 const clearPlanButton = document.querySelector("#clearPlanButton");
 const clearPlanChartButton = document.querySelector("#clearPlanChartButton");
 const planSaveStatus = document.querySelector("#planSaveStatus");
+const imageLightbox = document.querySelector("#imageLightbox");
+const lightboxImage = document.querySelector("#lightboxImage");
+const lightboxCaption = document.querySelector("#lightboxCaption");
+const lightboxCloseButton = document.querySelector("#lightboxCloseButton");
 const biasInputGrid = document.querySelector("#biasInputGrid");
 const biasDriverRows = document.querySelector("#biasDriverRows");
 const biasLibraryRows = document.querySelector("#biasLibraryRows");
@@ -409,7 +413,15 @@ Object.entries(planInputs).forEach(([key, input]) => {
 savePlanButton.addEventListener("click", saveTradePlan);
 clearPlanButton.addEventListener("click", clearTradePlan);
 planInputs.chartInput.addEventListener("change", savePlanChart);
+planInputs.chartImage.addEventListener("click", () => openImageLightbox(planInputs.chartImage.src, planInputs.chartCaption.textContent));
 clearPlanChartButton.addEventListener("click", clearPlanChart);
+lightboxCloseButton.addEventListener("click", closeImageLightbox);
+imageLightbox.addEventListener("click", (event) => {
+  if (event.target === imageLightbox) closeImageLightbox();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") closeImageLightbox();
+});
 biasRecalculateButton.addEventListener("click", renderBiasCalculator);
 biasSaveButton.addEventListener("click", saveBiasState);
 biasResetInputsButton.addEventListener("click", resetBiasInputs);
@@ -1457,6 +1469,7 @@ function renderPlanChart(plan = {}) {
   if (chart?.dataUrl) {
     planInputs.chartImage.src = chart.dataUrl;
     planInputs.chartImage.style.display = "block";
+    planInputs.chartImage.title = "Click to enlarge";
     planInputs.chartCaption.textContent = `${chart.name || "Pre-market chart"} saved for ${selectedPlanDate()}.`;
     clearPlanChartButton.disabled = false;
     return;
@@ -1466,6 +1479,21 @@ function renderPlanChart(plan = {}) {
   planInputs.chartImage.style.display = "none";
   planInputs.chartCaption.textContent = "No pre-market chart saved for this plan.";
   clearPlanChartButton.disabled = true;
+}
+
+function openImageLightbox(src, caption = "") {
+  if (!src) return;
+  lightboxImage.src = src;
+  lightboxCaption.textContent = caption || "Expanded chart";
+  imageLightbox.classList.remove("hidden");
+  document.body.classList.add("lightbox-open");
+}
+
+function closeImageLightbox() {
+  if (!imageLightbox || imageLightbox.classList.contains("hidden")) return;
+  imageLightbox.classList.add("hidden");
+  lightboxImage.removeAttribute("src");
+  document.body.classList.remove("lightbox-open");
 }
 
 function setPlanSaveStatus(message) {
