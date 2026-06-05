@@ -530,7 +530,6 @@ sectionLinks.forEach((link) => {
 document.querySelectorAll("[data-section-jump]").forEach((button) => {
   button.addEventListener("click", () => showSection(button.dataset.sectionJump));
 });
-movePlanningBlocksToTradePlan();
 showSection(window.location.hash.replace("#", "") || "dashboard");
 fetchTradingViewLevels();
 window.setInterval(fetchTradingViewLevels, 15000);
@@ -567,17 +566,6 @@ function loadTrades() {
 function saveTrades() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(trades));
   scheduleServerSave();
-}
-
-function movePlanningBlocksToTradePlan() {
-  const tradePlanSection = document.querySelector('[data-section-panel="trade-plan"]');
-  const planHeader = document.querySelector(".dashboard-plan-header");
-  const planPanel = document.querySelector(".trade-plan-panel");
-  const screenshotPanel = document.querySelector(".screenshot-panel");
-  const scorecardPanel = document.querySelector(".scorecard-panel");
-
-  if (!tradePlanSection || !planHeader || !planPanel || !screenshotPanel || !scorecardPanel) return;
-  tradePlanSection.replaceChildren(planHeader, planPanel, screenshotPanel, scorecardPanel);
 }
 
 function showSection(sectionName) {

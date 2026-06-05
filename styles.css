@@ -120,6 +120,14 @@ button {
   display: block;
 }
 
+.app-section:target {
+  display: block;
+}
+
+.app-shell:has(.app-section:target) .app-section.active-section:not(:target) {
+  display: none;
+}
+
 .topbar {
   justify-content: space-between;
   margin-bottom: 18px;
@@ -489,6 +497,7 @@ p {
 
 .market-live-panel,
 .stats-matrix-panel,
+.tradingview-sync-panel,
 .trade-plan-panel {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -542,11 +551,86 @@ p {
   min-height: auto;
 }
 
+.plan-risk-calculator {
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  background: rgba(8, 13, 24, 0.62);
+}
+
+.plan-risk-table-wrap {
+  overflow-x: auto;
+}
+
+.plan-risk-table {
+  width: 100%;
+  min-width: 1120px;
+  border-collapse: collapse;
+}
+
+.plan-risk-table th,
+.plan-risk-table td {
+  border-bottom: 1px solid var(--line);
+  padding: 8px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.plan-risk-table th {
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.plan-risk-table input,
+.plan-risk-table select {
+  min-width: 92px;
+}
+
+.plan-risk-table td[id] {
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.plan-risk-summary {
+  margin-top: 12px;
+  border: 1px solid rgba(45, 212, 191, 0.24);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: rgba(45, 212, 191, 0.08);
+  color: #c7fff6;
+  font-weight: 900;
+}
+
 .market-live-panel {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 12px;
+}
+
+.tradingview-sync-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.tradingview-sync-panel h3 {
+  margin: 2px 0 4px;
+}
+
+.tradingview-sync-panel p:last-child {
+  margin: 0;
+  color: var(--muted);
+}
+
+.tradingview-sync-panel .ghost-button {
+  width: auto;
+  min-width: 170px;
 }
 
 .market-live-panel label {
@@ -1998,7 +2082,8 @@ td {
 
   .topbar,
   .section-header-panel,
-  .panel-toolbar {
+  .panel-toolbar,
+  .tradingview-sync-panel {
     align-items: flex-start;
     flex-direction: column;
   }
