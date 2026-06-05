@@ -32,6 +32,307 @@
     </aside>
 
     <main class="app-shell">
+      <section class="app-section active-section" data-section-panel="trade-plan" id="trade-plan">
+      <section class="section-header-panel dashboard-plan-header">
+        <div>
+          <p class="eyebrow">Pre-Open</p>
+          <h2>Trade Plan Builder</h2>
+          <p>Create the game plan before the market opens, then attach the charts you used for execution and review.</p>
+        </div>
+        <label>
+          <span>Plan Date</span>
+          <input id="planDate" type="date">
+        </label>
+      </section>
+
+      <section class="trade-plan-panel">
+        <div class="plan-grid">
+          <label>
+            <span>Market Bias</span>
+            <select id="planBias">
+              <option value="">Unclear</option>
+              <option value="Bullish">Bullish</option>
+              <option value="Bearish">Bearish</option>
+              <option value="Balanced">Balanced</option>
+              <option value="Wait-and-see">Wait-and-see</option>
+            </select>
+          </label>
+          <label>
+            <span>Max Trades</span>
+            <input id="planMaxTrades" type="number" min="0" step="1" placeholder="3">
+          </label>
+          <label>
+            <span>Max Daily Loss</span>
+            <input id="planMaxLoss" type="number" min="0" step="1" placeholder="500">
+          </label>
+          <label>
+            <span>Target Day Type</span>
+            <select id="planDayType">
+              <option value="">Unmarked</option>
+              <option value="Trend day">Trend day</option>
+              <option value="Range day">Range day</option>
+              <option value="Gap fill">Gap fill</option>
+              <option value="Outside day">Outside day</option>
+              <option value="Inside day">Inside day</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="plan-risk-calculator">
+          <div class="pre-market-chart-copy">
+            <h3>Pre-Trade R Calculator</h3>
+            <p>Enter the planned entry, stop, target, and size to calculate risk, reward, ticks, and R:R before execution.</p>
+          </div>
+          <div class="plan-risk-table-wrap">
+            <table class="plan-risk-table">
+              <thead>
+                <tr>
+                  <th>Side</th>
+                  <th>Entry</th>
+                  <th>Stop</th>
+                  <th>Take Profit</th>
+                  <th>Quantity</th>
+                  <th>Point Value</th>
+                  <th>Tick Size</th>
+                  <th>Risk $</th>
+                  <th>Profit $</th>
+                  <th>Points</th>
+                  <th>Ticks</th>
+                  <th>R/R</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td data-label="Side">
+                    <select id="planCalcSide">
+                      <option value="Long">Long</option>
+                      <option value="Short">Short</option>
+                    </select>
+                  </td>
+                  <td data-label="Entry"><input id="planCalcEntry" type="number" step="0.01" placeholder="29189.25"></td>
+                  <td data-label="Stop"><input id="planCalcStop" type="number" step="0.01" placeholder="29086.50"></td>
+                  <td data-label="Take Profit"><input id="planCalcTarget" type="number" step="0.01" placeholder="29323.25"></td>
+                  <td data-label="Quantity"><input id="planCalcQuantity" type="number" min="0" step="1" placeholder="4"></td>
+                  <td data-label="Point Value"><input id="planCalcPointValue" type="number" min="0" step="0.01" placeholder="2"></td>
+                  <td data-label="Tick Size"><input id="planCalcTickSize" type="number" min="0" step="0.01" placeholder="0.25"></td>
+                  <td data-label="Risk $" id="planCalcRisk">$0.00</td>
+                  <td data-label="Profit $" id="planCalcProfit">$0.00</td>
+                  <td data-label="Points" id="planCalcPoints">0.00</td>
+                  <td data-label="Ticks" id="planCalcTicks">0</td>
+                  <td data-label="R/R" id="planCalcRr">0.00R</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="plan-risk-summary" id="planCalcSummary">Fill entry, stop, target, quantity, and point value to calculate the setup.</div>
+        </div>
+
+        <div class="plan-grid wide-plan-grid">
+          <label>
+            <span>News / Calendar</span>
+            <textarea id="planNews" rows="4" placeholder="CPI, FOMC, JOLTS, Fed speakers, auction times..."></textarea>
+          </label>
+          <label>
+            <span>Key Levels</span>
+            <textarea id="planLevels" rows="4" placeholder="ONH, ONL, pVAH, pVAL, pPOC, IBH, IBL, liquidity zones..."></textarea>
+          </label>
+        </div>
+
+        <div class="scenario-grid">
+          <label>
+            <span>If Bullish</span>
+            <textarea id="planBullish" rows="5" placeholder="If price reclaims ___ and holds, then I look for long entry at ___ with invalidation at ___."></textarea>
+          </label>
+          <label>
+            <span>If Bearish</span>
+            <textarea id="planBearish" rows="5" placeholder="If price rejects ___ and breaks ___, then I look for short entry at ___ with invalidation at ___."></textarea>
+          </label>
+          <label>
+            <span>If Range / No Trade</span>
+            <textarea id="planNeutral" rows="5" placeholder="If price chops between ___ and ___, then I wait. No trade unless ___."></textarea>
+          </label>
+        </div>
+
+        <div class="pre-market-chart-panel">
+          <div class="pre-market-chart-copy">
+            <h3>Pre-Market Chart & Ideas</h3>
+            <p>Attach the chart you are planning from and write the main market ideas for this session.</p>
+          </div>
+          <div class="pre-market-chart-grid">
+            <div>
+              <label>
+                <span>Market Ideas</span>
+                <textarea id="planMarketIdeas" rows="6" placeholder="Main thesis, invalidation, liquidity targets, what would change your mind..."></textarea>
+              </label>
+              <label class="file-picker">
+                <span>Pre-Market Chart</span>
+                <input id="planChartInput" type="file" accept="image/*">
+              </label>
+              <button class="danger-button" id="clearPlanChartButton" type="button">Clear Chart</button>
+            </div>
+            <figure class="screenshot-preview plan-chart-preview">
+              <img id="planChartImage" alt="Saved pre-market chart preview">
+              <figcaption id="planChartCaption">No pre-market chart saved for this plan.</figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <div class="plan-checklist">
+          <label><input id="planChecklistNews" type="checkbox"> News checked</label>
+          <label><input id="planChecklistLevels" type="checkbox"> Levels marked</label>
+          <label><input id="planChecklistRisk" type="checkbox"> Risk defined</label>
+          <label><input id="planChecklistNoChase" type="checkbox"> No-chase rule accepted</label>
+        </div>
+
+        <div class="scorecard-actions">
+          <span class="save-status" id="planSaveStatus">Plan autosaves while you type.</span>
+          <button class="primary-button" id="savePlanButton" type="button">Save Game Plan</button>
+          <button class="danger-button" id="clearPlanButton" type="button">Clear Plan</button>
+        </div>
+      </section>
+
+      <section class="screenshot-panel">
+        <div class="screenshot-copy">
+          <p class="eyebrow">Trade Screenshot</p>
+          <h2>Daily Chart Review</h2>
+          <p>Attach the screenshot for a specific trading day so your scorecard has visual context.</p>
+        </div>
+
+        <div class="screenshot-controls">
+          <label>
+            <span>Review Date</span>
+            <input id="screenshotDate" type="date">
+          </label>
+          <label class="file-picker">
+            <span>Execution Screenshot</span>
+            <input id="screenshotInput" type="file" accept="image/*">
+          </label>
+          <button class="danger-button" id="clearScreenshotButton" type="button">Clear Image</button>
+          <label class="file-picker">
+            <span>TradingView Chart</span>
+            <input id="contextScreenshotInput" type="file" accept="image/*">
+          </label>
+          <button class="danger-button" id="clearContextScreenshotButton" type="button">Clear TradingView</button>
+        </div>
+
+        <figure class="screenshot-preview" id="screenshotPreview">
+          <img id="screenshotImage" alt="Trade screenshot preview">
+          <figcaption id="screenshotCaption">No execution screenshot saved for this day.</figcaption>
+        </figure>
+        <figure class="screenshot-preview" id="contextScreenshotPreview">
+          <img id="contextScreenshotImage" alt="TradingView chart preview">
+          <figcaption id="contextScreenshotCaption">No TradingView chart saved for this day.</figcaption>
+        </figure>
+      </section>
+
+      <section class="scorecard-panel">
+        <div class="scorecard-header">
+          <div>
+            <p class="eyebrow">Daily Review</p>
+            <h2>Trading Scorecard</h2>
+            <p>Built from your screenshot: preparation, execution, risk, and behavior penalties.</p>
+          </div>
+          <label class="review-date-field">
+            <span>Scorecard Date</span>
+            <input id="scorecardDate" type="date">
+          </label>
+          <div class="score-summary">
+            <span id="scoreSummaryPercent">0%</span>
+            <strong id="scoreSummaryGrade">No grade</strong>
+            <small id="scoreSummaryPoints">0 / 0 points</small>
+          </div>
+        </div>
+
+        <div class="scorecard-grid" id="scorecardGrid"></div>
+
+        <label class="daily-note-field">
+          <span>Daily Review Notes</span>
+          <textarea id="dailyReviewNote" rows="4" placeholder="Daily recap, key mistake, best execution, what to repeat tomorrow..."></textarea>
+        </label>
+
+        <div class="market-context-panel">
+          <div>
+            <h3>Market Context</h3>
+            <p>Feeds the probability reports.</p>
+          </div>
+          <div class="market-context-grid">
+            <label>
+              <span>Gap Direction</span>
+              <select id="contextGapDirection">
+                <option value="">None</option>
+                <option value="up">Gap Up</option>
+                <option value="down">Gap Down</option>
+              </select>
+            </label>
+            <label>
+              <span>Gap Filled?</span>
+              <select id="contextGapFilled">
+                <option value="">N/A</option>
+                <option value="yes">Filled</option>
+                <option value="no">Not Filled</option>
+              </select>
+            </label>
+            <label>
+              <span>Day Type</span>
+              <select id="contextDayType">
+                <option value="">Unmarked</option>
+                <option value="inside">Inside Day</option>
+                <option value="outside_bullish">Bullish Outside Day</option>
+                <option value="outside_bearish">Bearish Outside Day</option>
+              </select>
+            </label>
+            <label>
+              <span>Outside Reversed?</span>
+              <select id="contextOutsideReversed">
+                <option value="">N/A</option>
+                <option value="yes">Reversed</option>
+                <option value="no">Did Not Reverse</option>
+              </select>
+            </label>
+            <label>
+              <span>Opening Candle</span>
+              <select id="contextOpeningCandle">
+                <option value="">Unmarked</option>
+                <option value="green">Green Candle</option>
+                <option value="red">Red Candle</option>
+              </select>
+            </label>
+            <label>
+              <span>Day Color</span>
+              <select id="contextDayColor">
+                <option value="">Unmarked</option>
+                <option value="green">Green Day</option>
+                <option value="red">Red Day</option>
+              </select>
+            </label>
+            <label>
+              <span>High Made?</span>
+              <select id="contextHighMade">
+                <option value="">No</option>
+                <option value="yes">Yes</option>
+              </select>
+            </label>
+            <label>
+              <span>Low Made?</span>
+              <select id="contextLowMade">
+                <option value="">No</option>
+                <option value="yes">Yes</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <div class="scorecard-actions">
+          <span class="save-status" id="scorecardSaveStatus">Autosaves locally.</span>
+          <button class="primary-button save-review-button" id="saveScorecardButton" type="button">Save Daily Review</button>
+          <button class="ghost-button" id="perfectScoreButton" type="button">Mark Perfect Day</button>
+          <button class="danger-button" id="resetScoreButton" type="button">Reset Scorecard</button>
+        </div>
+      </section>
+
+      </section>
+
+      <div class="deploy-version-note" id="deployVersionNote">Trade plan hardfix loaded</div>
       <section class="app-section" data-section-panel="dashboard" id="dashboard">
       <section class="topbar">
         <div>
@@ -463,306 +764,6 @@
           </div>
           <div class="matrix-scroll" id="statsMatrix"></div>
         </section>
-      </section>
-
-      <section class="app-section active-section" data-section-panel="trade-plan" id="trade-plan">
-      <section class="section-header-panel dashboard-plan-header">
-        <div>
-          <p class="eyebrow">Pre-Open</p>
-          <h2>Trade Plan Builder</h2>
-          <p>Create the game plan before the market opens, then attach the charts you used for execution and review.</p>
-        </div>
-        <label>
-          <span>Plan Date</span>
-          <input id="planDate" type="date">
-        </label>
-      </section>
-
-      <section class="trade-plan-panel">
-        <div class="plan-grid">
-          <label>
-            <span>Market Bias</span>
-            <select id="planBias">
-              <option value="">Unclear</option>
-              <option value="Bullish">Bullish</option>
-              <option value="Bearish">Bearish</option>
-              <option value="Balanced">Balanced</option>
-              <option value="Wait-and-see">Wait-and-see</option>
-            </select>
-          </label>
-          <label>
-            <span>Max Trades</span>
-            <input id="planMaxTrades" type="number" min="0" step="1" placeholder="3">
-          </label>
-          <label>
-            <span>Max Daily Loss</span>
-            <input id="planMaxLoss" type="number" min="0" step="1" placeholder="500">
-          </label>
-          <label>
-            <span>Target Day Type</span>
-            <select id="planDayType">
-              <option value="">Unmarked</option>
-              <option value="Trend day">Trend day</option>
-              <option value="Range day">Range day</option>
-              <option value="Gap fill">Gap fill</option>
-              <option value="Outside day">Outside day</option>
-              <option value="Inside day">Inside day</option>
-            </select>
-          </label>
-        </div>
-
-        <div class="plan-risk-calculator">
-          <div class="pre-market-chart-copy">
-            <h3>Pre-Trade R Calculator</h3>
-            <p>Enter the planned entry, stop, target, and size to calculate risk, reward, ticks, and R:R before execution.</p>
-          </div>
-          <div class="plan-risk-table-wrap">
-            <table class="plan-risk-table">
-              <thead>
-                <tr>
-                  <th>Side</th>
-                  <th>Entry</th>
-                  <th>Stop</th>
-                  <th>Take Profit</th>
-                  <th>Quantity</th>
-                  <th>Point Value</th>
-                  <th>Tick Size</th>
-                  <th>Risk $</th>
-                  <th>Profit $</th>
-                  <th>Points</th>
-                  <th>Ticks</th>
-                  <th>R/R</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td data-label="Side">
-                    <select id="planCalcSide">
-                      <option value="Long">Long</option>
-                      <option value="Short">Short</option>
-                    </select>
-                  </td>
-                  <td data-label="Entry"><input id="planCalcEntry" type="number" step="0.01" placeholder="29189.25"></td>
-                  <td data-label="Stop"><input id="planCalcStop" type="number" step="0.01" placeholder="29086.50"></td>
-                  <td data-label="Take Profit"><input id="planCalcTarget" type="number" step="0.01" placeholder="29323.25"></td>
-                  <td data-label="Quantity"><input id="planCalcQuantity" type="number" min="0" step="1" placeholder="4"></td>
-                  <td data-label="Point Value"><input id="planCalcPointValue" type="number" min="0" step="0.01" placeholder="2"></td>
-                  <td data-label="Tick Size"><input id="planCalcTickSize" type="number" min="0" step="0.01" placeholder="0.25"></td>
-                  <td data-label="Risk $" id="planCalcRisk">$0.00</td>
-                  <td data-label="Profit $" id="planCalcProfit">$0.00</td>
-                  <td data-label="Points" id="planCalcPoints">0.00</td>
-                  <td data-label="Ticks" id="planCalcTicks">0</td>
-                  <td data-label="R/R" id="planCalcRr">0.00R</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="plan-risk-summary" id="planCalcSummary">Fill entry, stop, target, quantity, and point value to calculate the setup.</div>
-        </div>
-
-        <div class="plan-grid wide-plan-grid">
-          <label>
-            <span>News / Calendar</span>
-            <textarea id="planNews" rows="4" placeholder="CPI, FOMC, JOLTS, Fed speakers, auction times..."></textarea>
-          </label>
-          <label>
-            <span>Key Levels</span>
-            <textarea id="planLevels" rows="4" placeholder="ONH, ONL, pVAH, pVAL, pPOC, IBH, IBL, liquidity zones..."></textarea>
-          </label>
-        </div>
-
-        <div class="scenario-grid">
-          <label>
-            <span>If Bullish</span>
-            <textarea id="planBullish" rows="5" placeholder="If price reclaims ___ and holds, then I look for long entry at ___ with invalidation at ___."></textarea>
-          </label>
-          <label>
-            <span>If Bearish</span>
-            <textarea id="planBearish" rows="5" placeholder="If price rejects ___ and breaks ___, then I look for short entry at ___ with invalidation at ___."></textarea>
-          </label>
-          <label>
-            <span>If Range / No Trade</span>
-            <textarea id="planNeutral" rows="5" placeholder="If price chops between ___ and ___, then I wait. No trade unless ___."></textarea>
-          </label>
-        </div>
-
-        <div class="pre-market-chart-panel">
-          <div class="pre-market-chart-copy">
-            <h3>Pre-Market Chart & Ideas</h3>
-            <p>Attach the chart you are planning from and write the main market ideas for this session.</p>
-          </div>
-          <div class="pre-market-chart-grid">
-            <div>
-              <label>
-                <span>Market Ideas</span>
-                <textarea id="planMarketIdeas" rows="6" placeholder="Main thesis, invalidation, liquidity targets, what would change your mind..."></textarea>
-              </label>
-              <label class="file-picker">
-                <span>Pre-Market Chart</span>
-                <input id="planChartInput" type="file" accept="image/*">
-              </label>
-              <button class="danger-button" id="clearPlanChartButton" type="button">Clear Chart</button>
-            </div>
-            <figure class="screenshot-preview plan-chart-preview">
-              <img id="planChartImage" alt="Saved pre-market chart preview">
-              <figcaption id="planChartCaption">No pre-market chart saved for this plan.</figcaption>
-            </figure>
-          </div>
-        </div>
-
-        <div class="plan-checklist">
-          <label><input id="planChecklistNews" type="checkbox"> News checked</label>
-          <label><input id="planChecklistLevels" type="checkbox"> Levels marked</label>
-          <label><input id="planChecklistRisk" type="checkbox"> Risk defined</label>
-          <label><input id="planChecklistNoChase" type="checkbox"> No-chase rule accepted</label>
-        </div>
-
-        <div class="scorecard-actions">
-          <span class="save-status" id="planSaveStatus">Plan autosaves while you type.</span>
-          <button class="primary-button" id="savePlanButton" type="button">Save Game Plan</button>
-          <button class="danger-button" id="clearPlanButton" type="button">Clear Plan</button>
-        </div>
-      </section>
-
-      <section class="screenshot-panel">
-        <div class="screenshot-copy">
-          <p class="eyebrow">Trade Screenshot</p>
-          <h2>Daily Chart Review</h2>
-          <p>Attach the screenshot for a specific trading day so your scorecard has visual context.</p>
-        </div>
-
-        <div class="screenshot-controls">
-          <label>
-            <span>Review Date</span>
-            <input id="screenshotDate" type="date">
-          </label>
-          <label class="file-picker">
-            <span>Execution Screenshot</span>
-            <input id="screenshotInput" type="file" accept="image/*">
-          </label>
-          <button class="danger-button" id="clearScreenshotButton" type="button">Clear Image</button>
-          <label class="file-picker">
-            <span>TradingView Chart</span>
-            <input id="contextScreenshotInput" type="file" accept="image/*">
-          </label>
-          <button class="danger-button" id="clearContextScreenshotButton" type="button">Clear TradingView</button>
-        </div>
-
-        <figure class="screenshot-preview" id="screenshotPreview">
-          <img id="screenshotImage" alt="Trade screenshot preview">
-          <figcaption id="screenshotCaption">No execution screenshot saved for this day.</figcaption>
-        </figure>
-        <figure class="screenshot-preview" id="contextScreenshotPreview">
-          <img id="contextScreenshotImage" alt="TradingView chart preview">
-          <figcaption id="contextScreenshotCaption">No TradingView chart saved for this day.</figcaption>
-        </figure>
-      </section>
-
-      <section class="scorecard-panel">
-        <div class="scorecard-header">
-          <div>
-            <p class="eyebrow">Daily Review</p>
-            <h2>Trading Scorecard</h2>
-            <p>Built from your screenshot: preparation, execution, risk, and behavior penalties.</p>
-          </div>
-          <label class="review-date-field">
-            <span>Scorecard Date</span>
-            <input id="scorecardDate" type="date">
-          </label>
-          <div class="score-summary">
-            <span id="scoreSummaryPercent">0%</span>
-            <strong id="scoreSummaryGrade">No grade</strong>
-            <small id="scoreSummaryPoints">0 / 0 points</small>
-          </div>
-        </div>
-
-        <div class="scorecard-grid" id="scorecardGrid"></div>
-
-        <label class="daily-note-field">
-          <span>Daily Review Notes</span>
-          <textarea id="dailyReviewNote" rows="4" placeholder="Daily recap, key mistake, best execution, what to repeat tomorrow..."></textarea>
-        </label>
-
-        <div class="market-context-panel">
-          <div>
-            <h3>Market Context</h3>
-            <p>Feeds the probability reports.</p>
-          </div>
-          <div class="market-context-grid">
-            <label>
-              <span>Gap Direction</span>
-              <select id="contextGapDirection">
-                <option value="">None</option>
-                <option value="up">Gap Up</option>
-                <option value="down">Gap Down</option>
-              </select>
-            </label>
-            <label>
-              <span>Gap Filled?</span>
-              <select id="contextGapFilled">
-                <option value="">N/A</option>
-                <option value="yes">Filled</option>
-                <option value="no">Not Filled</option>
-              </select>
-            </label>
-            <label>
-              <span>Day Type</span>
-              <select id="contextDayType">
-                <option value="">Unmarked</option>
-                <option value="inside">Inside Day</option>
-                <option value="outside_bullish">Bullish Outside Day</option>
-                <option value="outside_bearish">Bearish Outside Day</option>
-              </select>
-            </label>
-            <label>
-              <span>Outside Reversed?</span>
-              <select id="contextOutsideReversed">
-                <option value="">N/A</option>
-                <option value="yes">Reversed</option>
-                <option value="no">Did Not Reverse</option>
-              </select>
-            </label>
-            <label>
-              <span>Opening Candle</span>
-              <select id="contextOpeningCandle">
-                <option value="">Unmarked</option>
-                <option value="green">Green Candle</option>
-                <option value="red">Red Candle</option>
-              </select>
-            </label>
-            <label>
-              <span>Day Color</span>
-              <select id="contextDayColor">
-                <option value="">Unmarked</option>
-                <option value="green">Green Day</option>
-                <option value="red">Red Day</option>
-              </select>
-            </label>
-            <label>
-              <span>High Made?</span>
-              <select id="contextHighMade">
-                <option value="">No</option>
-                <option value="yes">Yes</option>
-              </select>
-            </label>
-            <label>
-              <span>Low Made?</span>
-              <select id="contextLowMade">
-                <option value="">No</option>
-                <option value="yes">Yes</option>
-              </select>
-            </label>
-          </div>
-        </div>
-
-        <div class="scorecard-actions">
-          <span class="save-status" id="scorecardSaveStatus">Autosaves locally.</span>
-          <button class="primary-button save-review-button" id="saveScorecardButton" type="button">Save Daily Review</button>
-          <button class="ghost-button" id="perfectScoreButton" type="button">Mark Perfect Day</button>
-          <button class="danger-button" id="resetScoreButton" type="button">Reset Scorecard</button>
-        </div>
-      </section>
-
       </section>
 
       <section class="app-section" data-section-panel="bias-calculator" id="bias-calculator">

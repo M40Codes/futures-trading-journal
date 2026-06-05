@@ -952,6 +952,13 @@ p {
   font-size: 0.86rem;
 }
 
+.deploy-version-note {
+  margin: 0 0 10px;
+  color: rgba(141, 155, 176, 0.65);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
 .simple-bars {
   display: flex;
   align-items: end;
