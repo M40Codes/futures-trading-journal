@@ -573,10 +573,11 @@ function movePlanningBlocksToTradePlan() {
   const tradePlanSection = document.querySelector('[data-section-panel="trade-plan"]');
   const planHeader = document.querySelector(".dashboard-plan-header");
   const planPanel = document.querySelector(".trade-plan-panel");
+  const screenshotPanel = document.querySelector(".screenshot-panel");
   const scorecardPanel = document.querySelector(".scorecard-panel");
 
-  if (!tradePlanSection || !planHeader || !planPanel || !scorecardPanel) return;
-  tradePlanSection.replaceChildren(planHeader, planPanel, scorecardPanel);
+  if (!tradePlanSection || !planHeader || !planPanel || !screenshotPanel || !scorecardPanel) return;
+  tradePlanSection.replaceChildren(planHeader, planPanel, screenshotPanel, scorecardPanel);
 }
 
 function showSection(sectionName) {
