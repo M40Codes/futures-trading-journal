@@ -26,7 +26,7 @@
     </aside>
 
     <main class="app-shell">
-      <section class="app-section" data-section-panel="dashboard" id="dashboard">
+      <section class="app-section active-section" data-section-panel="dashboard" id="dashboard">
       <section class="topbar">
         <div>
           <p class="eyebrow">Futures Journal</p>
@@ -126,48 +126,6 @@
           </div>
           <div class="recent-trades-list" id="recentTradesList"></div>
         </section>
-      </section>
-
-      <section class="rr-validator-panel">
-        <div class="rr-validator-copy">
-          <p class="eyebrow">Step 4</p>
-          <h2>2:1 Risk-to-Reward Validator</h2>
-          <p>The distance from entry to the Master Target must be at least twice the distance from entry to the structural stop. If probability is high but R:R is below 2:1, wait for a deeper retracement or pass.</p>
-        </div>
-
-        <div class="rr-input-grid">
-          <label>
-            <span>Entry Price</span>
-            <input id="rrEntryPrice" type="number" step="0.01" placeholder="29189.25">
-          </label>
-          <label>
-            <span>Master Target</span>
-            <input id="rrTargetPrice" type="number" step="0.01" placeholder="29323.25">
-          </label>
-          <label>
-            <span>Safe Stop</span>
-            <input id="rrStopPrice" type="number" step="0.01" placeholder="29086.50">
-          </label>
-        </div>
-
-        <div class="rr-output-grid">
-          <article>
-            <span>Reward Distance</span>
-            <strong id="rrRewardDistance">0.00 pts</strong>
-          </article>
-          <article>
-            <span>Risk Distance</span>
-            <strong id="rrRiskDistance">0.00 pts</strong>
-          </article>
-          <article>
-            <span>R:R Ratio</span>
-            <strong id="rrRatio">0.00R</strong>
-          </article>
-          <article class="rr-verdict-card" id="rrVerdictCard">
-            <span>Execution Gate</span>
-            <strong id="rrVerdict">Waiting for prices</strong>
-          </article>
-        </div>
       </section>
 
       <section class="scorecard-panel">
@@ -320,6 +278,55 @@
           </label>
         </div>
 
+        <div class="plan-risk-calculator">
+          <div class="pre-market-chart-copy">
+            <h3>Pre-Trade R Calculator</h3>
+            <p>Enter the planned entry, stop, target, and size to calculate risk, reward, ticks, and R:R before execution.</p>
+          </div>
+          <div class="plan-risk-table-wrap">
+            <table class="plan-risk-table">
+              <thead>
+                <tr>
+                  <th>Side</th>
+                  <th>Entry</th>
+                  <th>Stop</th>
+                  <th>Take Profit</th>
+                  <th>Quantity</th>
+                  <th>Point Value</th>
+                  <th>Tick Size</th>
+                  <th>Risk $</th>
+                  <th>Profit $</th>
+                  <th>Points</th>
+                  <th>Ticks</th>
+                  <th>R/R</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td data-label="Side">
+                    <select id="planCalcSide">
+                      <option value="Long">Long</option>
+                      <option value="Short">Short</option>
+                    </select>
+                  </td>
+                  <td data-label="Entry"><input id="planCalcEntry" type="number" step="0.01" placeholder="29189.25"></td>
+                  <td data-label="Stop"><input id="planCalcStop" type="number" step="0.01" placeholder="29086.50"></td>
+                  <td data-label="Take Profit"><input id="planCalcTarget" type="number" step="0.01" placeholder="29323.25"></td>
+                  <td data-label="Quantity"><input id="planCalcQuantity" type="number" min="0" step="1" placeholder="4"></td>
+                  <td data-label="Point Value"><input id="planCalcPointValue" type="number" min="0" step="0.01" placeholder="2"></td>
+                  <td data-label="Tick Size"><input id="planCalcTickSize" type="number" min="0" step="0.01" placeholder="0.25"></td>
+                  <td data-label="Risk $" id="planCalcRisk">$0.00</td>
+                  <td data-label="Profit $" id="planCalcProfit">$0.00</td>
+                  <td data-label="Points" id="planCalcPoints">0.00</td>
+                  <td data-label="Ticks" id="planCalcTicks">0</td>
+                  <td data-label="R/R" id="planCalcRr">0.00R</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="plan-risk-summary" id="planCalcSummary">Fill entry, stop, target, quantity, and point value to calculate the setup.</div>
+        </div>
+
         <div class="plan-grid wide-plan-grid">
           <label>
             <span>News / Calendar</span>
@@ -446,7 +453,7 @@
           <div class="form-header">
             <div>
               <h2 id="formTitle">Log Futures Trade</h2>
-              <p>Point value updates from the selected contract.</p>
+              <p>Enter the final result. The calendar updates from this net P&L.</p>
             </div>
             <button class="ghost-button hidden" id="cancelEditButton" type="button">Cancel</button>
           </div>
@@ -475,34 +482,12 @@
 
           <div class="field-grid">
             <label>
-              <span>Entry Price</span>
-              <input id="entry" name="entry" type="number" min="0" step="0.01" placeholder="5320.25" required>
+              <span>Final Net P&L</span>
+              <input id="profitLoss" name="profitLoss" type="number" step="0.01" placeholder="-125.50" required>
             </label>
-            <label>
-              <span>Exit Price</span>
-              <input id="exit" name="exit" type="number" min="0" step="0.01" placeholder="5331.00" required>
-            </label>
-          </div>
-
-          <div class="field-grid">
             <label>
               <span>Contracts</span>
-              <input id="quantity" name="quantity" type="number" min="1" step="1" placeholder="2" required>
-            </label>
-            <label>
-              <span>Point Value</span>
-              <input id="pointValue" name="pointValue" type="number" min="0" step="0.01" required>
-            </label>
-          </div>
-
-          <div class="field-grid">
-            <label>
-              <span>Commissions</span>
-              <input id="commission" name="commission" type="number" min="0" step="0.01" placeholder="9.60">
-            </label>
-            <label>
-              <span>Risk $</span>
-              <input id="risk" name="risk" type="number" min="0" step="0.01" placeholder="250">
+              <input id="quantity" name="quantity" type="number" min="1" step="1" placeholder="1">
             </label>
           </div>
 
@@ -694,6 +679,15 @@
           </div>
         </section>
 
+        <section class="tradingview-sync-panel">
+          <div>
+            <p class="eyebrow">TradingView Webhook</p>
+            <h3>Live Level Sync</h3>
+            <p id="tradingViewLevelsStatus">Waiting for TradingView webhook levels.</p>
+          </div>
+          <button class="ghost-button" id="pullTradingViewLevelsButton" type="button">Pull Latest Levels</button>
+        </section>
+
         <section class="market-live-panel">
           <label>
             <span>Session Bias</span>
@@ -766,10 +760,9 @@
         <section class="section-header-panel">
           <div>
             <p class="eyebrow">Pre-Open</p>
-            <h2>Trade Plan Lives On Dashboard</h2>
-            <p>The full trade plan, pre-market chart, execution screenshot, and TradingView chart are now together on the Dashboard.</p>
+            <h2>Trade Plan</h2>
+            <p>The trade plan builder, scorecard, and market context load here.</p>
           </div>
-          <button class="primary-button save-review-button" type="button" data-section-jump="dashboard">Open Dashboard</button>
         </section>
       </section>
 

@@ -118,6 +118,23 @@ const planInputs = {
   checklistRisk: document.querySelector("#planChecklistRisk"),
   checklistNoChase: document.querySelector("#planChecklistNoChase"),
 };
+const planCalcInputs = {
+  side: document.querySelector("#planCalcSide"),
+  entry: document.querySelector("#planCalcEntry"),
+  stop: document.querySelector("#planCalcStop"),
+  target: document.querySelector("#planCalcTarget"),
+  quantity: document.querySelector("#planCalcQuantity"),
+  pointValue: document.querySelector("#planCalcPointValue"),
+  tickSize: document.querySelector("#planCalcTickSize"),
+};
+const planCalcOutput = {
+  risk: document.querySelector("#planCalcRisk"),
+  profit: document.querySelector("#planCalcProfit"),
+  points: document.querySelector("#planCalcPoints"),
+  ticks: document.querySelector("#planCalcTicks"),
+  rr: document.querySelector("#planCalcRr"),
+  summary: document.querySelector("#planCalcSummary"),
+};
 const savePlanButton = document.querySelector("#savePlanButton");
 const clearPlanButton = document.querySelector("#clearPlanButton");
 const clearPlanChartButton = document.querySelector("#clearPlanChartButton");
@@ -454,13 +471,17 @@ Object.values(targetFilterInputs).forEach((input) => {
   input.addEventListener("input", renderStatsMatrix);
   input.addEventListener("change", renderStatsMatrix);
 });
-Object.values(rrInputs).forEach((input) => {
+Object.values(rrInputs).filter(Boolean).forEach((input) => {
   input.addEventListener("input", renderRrValidator);
 });
 pullTradingViewLevelsButton?.addEventListener("click", () => fetchTradingViewLevels({ force: true }));
 planInputs.date.addEventListener("change", renderTradePlan);
 Object.entries(planInputs).forEach(([key, input]) => {
   if (["date", "chartInput", "chartImage", "chartCaption"].includes(key)) return;
+  input.addEventListener("input", saveTradePlan);
+  input.addEventListener("change", saveTradePlan);
+});
+Object.values(planCalcInputs).filter(Boolean).forEach((input) => {
   input.addEventListener("input", saveTradePlan);
   input.addEventListener("change", saveTradePlan);
 });
@@ -509,6 +530,7 @@ sectionLinks.forEach((link) => {
 document.querySelectorAll("[data-section-jump]").forEach((button) => {
   button.addEventListener("click", () => showSection(button.dataset.sectionJump));
 });
+movePlanningBlocksToTradePlan();
 showSection(window.location.hash.replace("#", "") || "dashboard");
 fetchTradingViewLevels();
 window.setInterval(fetchTradingViewLevels, 15000);
@@ -545,6 +567,16 @@ function loadTrades() {
 function saveTrades() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(trades));
   scheduleServerSave();
+}
+
+function movePlanningBlocksToTradePlan() {
+  const tradePlanSection = document.querySelector('[data-section-panel="trade-plan"]');
+  const planHeader = document.querySelector(".dashboard-plan-header");
+  const planPanel = document.querySelector(".trade-plan-panel");
+  const scorecardPanel = document.querySelector(".scorecard-panel");
+
+  if (!tradePlanSection || !planHeader || !planPanel || !scorecardPanel) return;
+  tradePlanSection.replaceChildren(planHeader, planPanel, scorecardPanel);
 }
 
 function showSection(sectionName) {
@@ -696,16 +728,16 @@ function applyTradingViewLevels(levels = {}, savedAt = "") {
 
   if (isFiniteLevel(levels.entry)) {
     targetFilterInputs.entry.value = Number(levels.entry).toFixed(2);
-    rrInputs.entry.value = Number(levels.entry).toFixed(2);
+    if (rrInputs.entry) rrInputs.entry.value = Number(levels.entry).toFixed(2);
   }
 
   if (isFiniteLevel(levels.stop)) {
     targetFilterInputs.stop.value = Number(levels.stop).toFixed(2);
-    rrInputs.stop.value = Number(levels.stop).toFixed(2);
+    if (rrInputs.stop) rrInputs.stop.value = Number(levels.stop).toFixed(2);
   }
 
   if (isFiniteLevel(levels.target)) {
-    rrInputs.target.value = Number(levels.target).toFixed(2);
+    if (rrInputs.target) rrInputs.target.value = Number(levels.target).toFixed(2);
   }
 
   renderStatsMatrix();
@@ -976,23 +1008,26 @@ function resizeImage(file, maxWidth, quality) {
 }
 
 function syncPointValue() {
+  if (!pointValueInput || !symbolInput) return;
   pointValueInput.value = CONTRACTS[symbolInput.value]?.pointValue ?? 50;
 }
 
 function tradeFromForm(data) {
-  const side = data.get("side");
-  const entry = Number(data.get("entry"));
-  const exit = Number(data.get("exit"));
-  const quantity = Number(data.get("quantity"));
-  const pointValue = Number(data.get("pointValue"));
+  const side = data.get("side") || "Long";
+  const entry = Number(data.get("entry")) || 0;
+  const exit = Number(data.get("exit")) || 0;
+  const quantity = Number(data.get("quantity")) || 1;
+  const pointValue = Number(data.get("pointValue")) || CONTRACTS[data.get("symbol")]?.pointValue || 1;
   const commission = Number(data.get("commission")) || 0;
   const risk = Number(data.get("risk")) || 0;
+  const manualProfitLoss = Number(data.get("profitLoss"));
   const direction = side === "Long" ? 1 : -1;
-  const points = (exit - entry) * direction;
-  const grossProfitLoss = points * pointValue * quantity;
-  const profitLoss = grossProfitLoss - commission;
+  const points = entry > 0 && exit > 0 ? (exit - entry) * direction : 0;
+  const grossProfitLoss = entry > 0 && exit > 0 ? points * pointValue * quantity : (Number.isFinite(manualProfitLoss) ? manualProfitLoss : 0);
+  const profitLoss = Number.isFinite(manualProfitLoss) ? manualProfitLoss : grossProfitLoss - commission;
   const rMultiple = risk > 0 ? profitLoss / risk : 0;
   const symbol = data.get("symbol");
+  const manualPnlOnly = !(entry > 0 && exit > 0);
 
   return {
     date: data.get("date"),
@@ -1012,6 +1047,7 @@ function tradeFromForm(data) {
     grossProfitLoss,
     profitLoss,
     rMultiple,
+    manualPnlOnly,
   };
 }
 
@@ -1608,6 +1644,7 @@ function renderTradePlan() {
   planInputs.checklistLevels.checked = Boolean(plan.checklistLevels);
   planInputs.checklistRisk.checked = Boolean(plan.checklistRisk);
   planInputs.checklistNoChase.checked = Boolean(plan.checklistNoChase);
+  renderPlanCalculator(plan.calculator ?? {});
   renderPlanChart(plan);
 }
 
@@ -1625,14 +1662,77 @@ function saveTradePlan() {
     bearish: planInputs.bearish.value,
     neutral: planInputs.neutral.value,
     marketIdeas: planInputs.marketIdeas.value,
+    calculator: currentPlanCalculator(),
     checklistNews: planInputs.checklistNews.checked,
     checklistLevels: planInputs.checklistLevels.checked,
     checklistRisk: planInputs.checklistRisk.checked,
     checklistNoChase: planInputs.checklistNoChase.checked,
     updatedAt: new Date().toISOString(),
   };
+  renderPlanCalculator(tradePlans[selectedPlanDate()].calculator);
   saveTradePlans();
   setPlanSaveStatus("Game plan saved.");
+}
+
+function currentPlanCalculator() {
+  if (!planCalcInputs.entry) return {};
+  return {
+    side: planCalcInputs.side?.value || "Long",
+    entry: planCalcInputs.entry?.value || "",
+    stop: planCalcInputs.stop?.value || "",
+    target: planCalcInputs.target?.value || "",
+    quantity: planCalcInputs.quantity?.value || "",
+    pointValue: planCalcInputs.pointValue?.value || "",
+    tickSize: planCalcInputs.tickSize?.value || "",
+  };
+}
+
+function renderPlanCalculator(calculator = {}) {
+  if (!planCalcInputs.entry || !planCalcOutput.summary) return;
+  planCalcInputs.side.value = calculator.side || "Long";
+  planCalcInputs.entry.value = calculator.entry ?? "";
+  planCalcInputs.stop.value = calculator.stop ?? "";
+  planCalcInputs.target.value = calculator.target ?? "";
+  planCalcInputs.quantity.value = calculator.quantity ?? "";
+  planCalcInputs.pointValue.value = calculator.pointValue ?? "";
+  planCalcInputs.tickSize.value = calculator.tickSize ?? "";
+
+  const side = planCalcInputs.side.value;
+  const entry = Number(planCalcInputs.entry.value);
+  const stop = Number(planCalcInputs.stop.value);
+  const target = Number(planCalcInputs.target.value);
+  const quantity = Number(planCalcInputs.quantity.value);
+  const pointValue = Number(planCalcInputs.pointValue.value);
+  const tickSize = Number(planCalcInputs.tickSize.value) || 0.25;
+  const direction = side === "Short" ? -1 : 1;
+  const riskPoints = Math.abs(entry - stop);
+  const targetPoints = (target - entry) * direction;
+  const valid = [entry, stop, target, quantity, pointValue].every((value) => Number.isFinite(value) && value > 0);
+  const profit = valid ? targetPoints * pointValue * quantity : 0;
+  const risk = valid ? riskPoints * pointValue * quantity : 0;
+  const ticks = valid && tickSize > 0 ? Math.abs(targetPoints) / tickSize : 0;
+  const rr = risk > 0 ? profit / risk : 0;
+
+  planCalcOutput.risk.textContent = currency.format(risk);
+  planCalcOutput.profit.textContent = currency.format(profit);
+  planCalcOutput.points.textContent = valid ? targetPoints.toFixed(2) : "0.00";
+  planCalcOutput.ticks.textContent = valid ? ticks.toFixed(0) : "0";
+  planCalcOutput.rr.textContent = Number.isFinite(rr) ? `${rr.toFixed(2)}R` : "0.00R";
+  planCalcOutput.profit.className = profit >= 0 ? "profit" : "loss";
+  planCalcOutput.rr.className = rr >= 2 ? "profit" : rr > 0 ? "" : "loss";
+
+  if (!valid) {
+    planCalcOutput.summary.textContent = "Fill entry, stop, target, quantity, and point value to calculate the setup.";
+    return;
+  }
+
+  const directionValid = targetPoints > 0;
+  if (!directionValid) {
+    planCalcOutput.summary.textContent = "Target is on the wrong side for this trade direction.";
+    return;
+  }
+
+  planCalcOutput.summary.textContent = `${side} setup risks ${currency.format(risk)} to make ${currency.format(profit)}. ${rr >= 2 ? "2:1 rule passes." : "Below 2:1, wait for a better entry or target."}`;
 }
 
 function clearTradePlan() {
@@ -2066,14 +2166,14 @@ function renderRows(items) {
     row.querySelector(".symbol-cell").textContent = trade.symbol;
     row.querySelector(".side-cell").textContent = trade.side;
     row.querySelector(".quantity-cell").textContent = `${trade.quantity}x`;
-    row.querySelector(".points-cell").textContent = `${trade.points.toFixed(2)} pts`;
+    row.querySelector(".points-cell").textContent = trade.manualPnlOnly ? "-" : `${trade.points.toFixed(2)} pts`;
 
     const plCell = row.querySelector(".pl-cell");
     plCell.textContent = currency.format(trade.profitLoss);
     plCell.classList.add(trade.profitLoss >= 0 ? "profit" : "loss");
 
     const rCell = row.querySelector(".r-cell");
-    rCell.textContent = `${trade.rMultiple.toFixed(2)}R`;
+    rCell.textContent = trade.manualPnlOnly || !trade.risk ? "-" : `${trade.rMultiple.toFixed(2)}R`;
     rCell.classList.add(trade.rMultiple >= 0 ? "profit" : "loss");
 
     row.querySelector(".setup-cell").textContent = trade.setup;
