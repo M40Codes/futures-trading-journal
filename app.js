@@ -530,7 +530,7 @@ sectionLinks.forEach((link) => {
 document.querySelectorAll("[data-section-jump]").forEach((button) => {
   button.addEventListener("click", () => showSection(button.dataset.sectionJump));
 });
-showSection(window.location.hash.replace("#", "") || "dashboard");
+showSection(window.location.hash.replace("#", "") || "trade-plan");
 fetchTradingViewLevels();
 window.setInterval(fetchTradingViewLevels, 15000);
 
