@@ -570,19 +570,7 @@ nextMonthButton.addEventListener("click", () => changeCalendarMonth(1));
 tradovateConnectButton.addEventListener("click", connectTradovate);
 tradovateSyncButton.addEventListener("click", syncTradovateTrades);
 probabilityDimension.addEventListener("change", () => renderProbabilities(trades));
-Object.entries(marketBiasInputs).forEach(([key, input]) => {
-  input?.addEventListener("change", () => {
-    marketBiasState.inputs[key] = input.value;
-    renderMarketBiasCalculator();
-  });
-});
-Object.entries(marketBiasProbInputs).forEach(([key, input]) => {
-  input?.addEventListener("input", () => {
-    marketBiasState.probabilities[key] = numberOrDefault(input.value, MARKET_BIAS_DEFAULT_PROBABILITIES[key] ?? 50);
-    renderMarketBiasCalculator();
-  });
-});
-marketBiasOutput.reset?.addEventListener("click", resetMarketBiasInputs);
+bindMarketBiasEvents();
 sectionLinks.forEach((link) => {
   link.addEventListener("click", (event) => {
     event.preventDefault();
@@ -631,15 +619,24 @@ function saveTrades() {
 }
 
 function showSection(sectionName) {
+  const targetSection = sectionName || "trade-plan";
   sectionLinks.forEach((link) => {
-    link.classList.toggle("active", link.dataset.section === sectionName);
+    link.classList.toggle("active", link.dataset.section === targetSection);
   });
 
   sectionPanels.forEach((panel) => {
-    panel.classList.toggle("active-section", panel.dataset.sectionPanel === sectionName);
+    const isActive = panel.dataset.sectionPanel === targetSection;
+    panel.classList.toggle("active-section", isActive);
+    panel.hidden = !isActive;
+    panel.style.display = isActive ? "block" : "none";
   });
 
-  window.location.hash = sectionName;
+  if (targetSection === "playbook") {
+    ensurePlaybookCalculatorMount();
+    renderMarketBiasCalculator();
+  }
+
+  window.location.hash = targetSection;
   renderSecondarySections();
 }
 
@@ -2420,6 +2417,9 @@ function renderRecentTrades(items) {
 }
 
 function renderMarketBiasCalculator() {
+  ensurePlaybookCalculatorMount();
+  refreshMarketBiasRefs();
+  bindMarketBiasEvents();
   if (!marketBiasOutput.score || !marketBiasOutput.rows) return;
   hydrateMarketBiasControls();
   const active = activeMarketBiasDrivers();
@@ -2437,6 +2437,110 @@ function renderMarketBiasCalculator() {
     : "Waiting for live inputs. Start with IB and ON structure.";
   renderMarketBiasDrivers(active);
   saveMarketBiasState();
+}
+
+function ensurePlaybookCalculatorMount() {
+  const playbookPanel = document.querySelector("#playbook");
+  if (!playbookPanel || playbookPanel.querySelector(".market-bias-panel")) return;
+  const header = document.createElement("section");
+  header.className = "section-header-panel";
+  header.innerHTML = `
+    <div>
+      <p class="eyebrow">Playbook</p>
+      <h2>NQ Market Bias Calculator</h2>
+      <p>Classify the session using structural truths first, then contextual confirmation.</p>
+    </div>
+  `;
+  const calculator = document.createElement("section");
+  calculator.className = "market-bias-panel";
+  calculator.innerHTML = `
+    <div class="market-bias-header">
+      <div>
+        <p class="eyebrow">Decision Support System</p>
+        <h3>Market Classification Matrix</h3>
+        <p>IB and overnight levels carry the heaviest weight. VWAP, delta, and volume confirm the read.</p>
+      </div>
+      <button class="ghost-button" id="marketBiasResetButton" type="button">Reset Session Inputs</button>
+    </div>
+    <div class="market-bias-output-grid">
+      <div class="market-bias-output-card"><span>Bias Score</span><strong id="marketBiasScore">0.0</strong><small id="marketBiasDriverCount">0 active inputs</small></div>
+      <div class="market-bias-output-card"><span>Market Classification</span><strong id="marketBiasClassification">Balanced</strong><small id="marketBiasLean">Neutral tape</small></div>
+      <div class="market-bias-output-card wide"><span>Recommended System</span><strong id="marketBiasSystem">Mean Reversion System</strong><small id="marketBiasNarrative">Waiting for live inputs. Start with IB and ON structure.</small></div>
+    </div>
+    <div class="market-bias-input-grid">
+      <label><span>IBH or IBL Structural Truth</span><select id="marketBiasIbhOrIbl"><option value="">Ignore</option><option value="bull">IBH accepted / long structure</option><option value="bear">IBL accepted / short structure</option></select></label>
+      <label><span>ONH or ONL Structural Truth</span><select id="marketBiasOnhOrOnl"><option value="">Ignore</option><option value="bull">ONH accepted / upside draw</option><option value="bear">ONL accepted / downside draw</option></select></label>
+      <label><span>ON MID</span><select id="marketBiasOnMid"><option value="">Ignore</option><option value="bull">Holding above ON MID</option><option value="bear">Holding below ON MID</option></select></label>
+      <label><span>IBH / IBL Context</span><select id="marketBiasIbContext"><option value="">Ignore</option><option value="bull">IBH pressure</option><option value="bear">IBL pressure</option></select></label>
+      <label><span>VWAP Position</span><select id="marketBiasVwap"><option value="">Ignore</option><option value="bull">Above VWAP</option><option value="bear">Below VWAP</option></select></label>
+      <label><span>Cumulative Delta</span><select id="marketBiasDelta"><option value="">Ignore</option><option value="bull">Bull delta</option><option value="bear">Bear delta</option></select></label>
+      <label><span>Volume vs 20-Day Average</span><select id="marketBiasVolume"><option value="">Ignore</option><option value="bull">Above average expansion</option><option value="bear">Below average / weak auction</option></select></label>
+    </div>
+    <div class="market-bias-driver-table">
+      <div class="market-bias-driver-head"><span>Input</span><span>Direction</span><span>Probability</span><span>Weight</span><span>Weighted Impact</span></div>
+      <div id="marketBiasDriverRows"></div>
+    </div>
+    <details class="market-bias-settings">
+      <summary>Update probabilities and weights</summary>
+      <div class="market-bias-settings-grid">
+        <label><span>IBH or IBL probability</span><input id="marketBiasProbIbhOrIbl" type="number" min="1" max="100" step="0.1" value="98.9"></label>
+        <label><span>ONH or ONL probability</span><input id="marketBiasProbOnhOrOnl" type="number" min="1" max="100" step="0.1" value="96.2"></label>
+        <label><span>ON MID probability</span><input id="marketBiasProbOnMid" type="number" min="1" max="100" step="0.1" value="75.3"></label>
+        <label><span>IBH probability</span><input id="marketBiasProbIbh" type="number" min="1" max="100" step="0.1" value="68.7"></label>
+        <label><span>IBL probability</span><input id="marketBiasProbIbl" type="number" min="1" max="100" step="0.1" value="62.6"></label>
+        <label><span>Standard context probability</span><input id="marketBiasProbStandard" type="number" min="1" max="100" step="0.1" value="55.0"></label>
+      </div>
+    </details>
+  `;
+  playbookPanel.prepend(calculator);
+  playbookPanel.prepend(header);
+}
+
+function refreshMarketBiasRefs() {
+  marketBiasInputs.ibhOrIbl = document.querySelector("#marketBiasIbhOrIbl");
+  marketBiasInputs.onhOrOnl = document.querySelector("#marketBiasOnhOrOnl");
+  marketBiasInputs.onMid = document.querySelector("#marketBiasOnMid");
+  marketBiasInputs.ibContext = document.querySelector("#marketBiasIbContext");
+  marketBiasInputs.vwap = document.querySelector("#marketBiasVwap");
+  marketBiasInputs.delta = document.querySelector("#marketBiasDelta");
+  marketBiasInputs.volume = document.querySelector("#marketBiasVolume");
+  marketBiasProbInputs.ibhOrIbl = document.querySelector("#marketBiasProbIbhOrIbl");
+  marketBiasProbInputs.onhOrOnl = document.querySelector("#marketBiasProbOnhOrOnl");
+  marketBiasProbInputs.onMid = document.querySelector("#marketBiasProbOnMid");
+  marketBiasProbInputs.ibh = document.querySelector("#marketBiasProbIbh");
+  marketBiasProbInputs.ibl = document.querySelector("#marketBiasProbIbl");
+  marketBiasProbInputs.standard = document.querySelector("#marketBiasProbStandard");
+  marketBiasOutput.score = document.querySelector("#marketBiasScore");
+  marketBiasOutput.driverCount = document.querySelector("#marketBiasDriverCount");
+  marketBiasOutput.classification = document.querySelector("#marketBiasClassification");
+  marketBiasOutput.lean = document.querySelector("#marketBiasLean");
+  marketBiasOutput.system = document.querySelector("#marketBiasSystem");
+  marketBiasOutput.narrative = document.querySelector("#marketBiasNarrative");
+  marketBiasOutput.rows = document.querySelector("#marketBiasDriverRows");
+  marketBiasOutput.reset = document.querySelector("#marketBiasResetButton");
+}
+
+function bindMarketBiasEvents() {
+  Object.entries(marketBiasInputs).forEach(([key, input]) => {
+    if (!input || input.dataset.marketBiasBound) return;
+    input.dataset.marketBiasBound = "true";
+    input.addEventListener("change", () => {
+      marketBiasState.inputs[key] = input.value;
+      renderMarketBiasCalculator();
+    });
+  });
+  Object.entries(marketBiasProbInputs).forEach(([key, input]) => {
+    if (!input || input.dataset.marketBiasBound) return;
+    input.dataset.marketBiasBound = "true";
+    input.addEventListener("input", () => {
+      marketBiasState.probabilities[key] = numberOrDefault(input.value, MARKET_BIAS_DEFAULT_PROBABILITIES[key] ?? 50);
+      renderMarketBiasCalculator();
+    });
+  });
+  if (marketBiasOutput.reset && !marketBiasOutput.reset.dataset.marketBiasBound) {
+    marketBiasOutput.reset.dataset.marketBiasBound = "true";
+    marketBiasOutput.reset.addEventListener("click", resetMarketBiasInputs);
+  }
 }
 
 function hydrateMarketBiasControls() {

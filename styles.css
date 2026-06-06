@@ -124,6 +124,11 @@ button {
   display: block;
 }
 
+#playbook.active-section,
+#playbook:target {
+  display: block !important;
+}
+
 .app-shell:has(.app-section:target) .app-section.active-section:not(:target) {
   display: none;
 }
