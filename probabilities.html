@@ -170,6 +170,7 @@
           <select id="matrixGroup">
             <option value="target">ON / Previous Day Levels</option>
             <option value="ib">IB Expansion Levels</option>
+            <option value="weekday">Weekday / Day Type</option>
           </select>
         </label>
         <label>
@@ -415,6 +416,13 @@
       ["hor", "HOR"],
       ["lor", "LOR"],
     ];
+    const weekdayColumns = [
+      ["highByWeekday", "High Made"],
+      ["lowByWeekday", "Low Made"],
+      ["greenDay", "Green Day"],
+      ["redDay", "Red Day"],
+      ["outsideReversal", "Outside Reversal"],
+    ];
     const targetRows = [
       ["ONH or ONL", 96.2, 97.4, 94.0, 97.7, 96.9, 99.1, 85.2],
       ["ON/VPOC", 82.1, 82.8, 80.8, 83.2, 82.3, 84.0, 75.4],
@@ -448,28 +456,67 @@
       ["1.5xIBH & 1.5xIBL", 5.7, 6.6, 4.2, 8.7, 3.8, 5.7, 1.6],
       ["2.0xIBH & 2.0xIBL", 1.3, 1.7, 0.6, 2.3, 0.8, 0.0, 1.6],
     ];
+    const weekdayRows = [
+      ["Monday", 14.29, 28.57, 65.38, 34.62, 67.00],
+      ["Tuesday", 21.43, 21.43, 50.00, 50.00, 67.00],
+      ["Wednesday", 50.00, 7.14, 69.23, 30.77, 67.00],
+      ["Thursday", 0.00, 14.29, 25.00, 75.00, 70.00],
+      ["Friday", 14.29, 28.57, 56.00, 44.00, 70.00],
+      ["Bullish outside day", null, null, null, null, 67.00],
+      ["Bearish outside day", null, null, null, null, 70.00],
+    ];
 
     const groupSelect = document.querySelector("#matrixGroup");
     const conditionSelect = document.querySelector("#matrixCondition");
     const contextSelect = document.querySelector("#matrixContext");
     const biasSelect = document.querySelector("#matrixBias");
 
+    function activeColumns() {
+      return groupSelect.value === "weekday" ? weekdayColumns : columns;
+    }
+
     function rowsForGroup() {
-      return groupSelect.value === "ib" ? ibRows : targetRows;
+      if (groupSelect.value === "ib") return ibRows;
+      if (groupSelect.value === "weekday") return weekdayRows;
+      return targetRows;
     }
 
     function selectedRow() {
       return rowsForGroup().find((row) => row[0] === conditionSelect.value) || rowsForGroup()[0];
     }
 
+    function populateContextOptions() {
+      const current = contextSelect.value;
+      contextSelect.replaceChildren();
+      activeColumns().forEach(([value, label]) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = label;
+        contextSelect.append(option);
+      });
+      contextSelect.value = activeColumns().some(([value]) => value === current) ? current : activeColumns()[0][0];
+    }
+
     function valueClass(value) {
+      if (value === null || value === undefined) return "";
       if (value >= 80) return "matrix-hot";
       if (value >= 65) return "matrix-good";
       if (value >= 55) return "matrix-mid";
       return "matrix-cold";
     }
 
+    function formatMatrixValue(value) {
+      return value === null || value === undefined ? "-" : `${value.toFixed(1)}%`;
+    }
+
+    function matrixCaption() {
+      if (groupSelect.value === "ib") return "IB Expansion Probability Matrix";
+      if (groupSelect.value === "weekday") return "Weekday, Day Color, and Outside-Day Probability Matrix";
+      return "ON / Previous Day Level Probability Matrix";
+    }
+
     function conviction(value) {
+      if (value === null || value === undefined) return "No percentage for this column. Choose another context.";
       if (value >= 80) return "Elite magnet. Prioritize this draw if entry and R:R align.";
       if (value >= 65) return "High-conviction draw. Trade with confirmation toward the level.";
       if (value >= 55) return "Moderate edge. Scalp or wait for better location.";
@@ -477,6 +524,12 @@
     }
 
     function tradePlan(value, rowName, bias) {
+      if (value === null || value === undefined) return ["No read", `${rowName} does not have a stat for this selected column.`];
+      if (groupSelect.value === "weekday") {
+        if (value >= 65) return ["Plan around the tendency", `${rowName} has a ${value.toFixed(1)}% tendency here. Use it as context, then wait for your execution setup.`];
+        if (value >= 55) return ["Light directional lean", `${rowName} is only moderately supportive. Use smaller size or require stronger confirmation.`];
+        return ["Do not force it", `${rowName} is weak for this weekday/day-type read. Let price action confirm first.`];
+      }
       if (value < 55) return ["Pass / wait", `${rowName} is not strong enough in this context. Do not force a trade.`];
       if (bias === "balanced") return ["Wait for location", `${rowName} is active, but without directional bias use it as a target/fade reference.`];
       if (value >= 80) return ["Continuation priority", `Use pullbacks/retests toward ${rowName}. Avoid fading the draw until it is tagged or invalidated.`];
@@ -485,6 +538,12 @@
     }
 
     function tapeRead(value, rowName) {
+      if (value === null || value === undefined) return ["No stat", `${rowName} has no value for this selected column.`];
+      if (groupSelect.value === "weekday") {
+        if (value >= 65) return ["Strong calendar tendency", `${rowName} is historically meaningful for this weekday/day-type condition.`];
+        if (value >= 55) return ["Moderate calendar tendency", `${rowName} gives context, but it is not a main trade trigger by itself.`];
+        return ["Weak calendar tendency", `${rowName} does not give a strong edge in this column.`];
+      }
       if (value >= 80) return ["Strong liquidity draw", `${rowName} is behaving like the main auction magnet.`];
       if (value >= 65) return ["Tradable draw", `${rowName} is in play, but still needs entry confirmation.`];
       if (value >= 55) return ["Mixed auction", `${rowName} matters, but the edge is not dominant.`];
@@ -506,16 +565,17 @@
     function renderTable() {
       const table = document.querySelector("#targetMatrix");
       const rows = rowsForGroup();
+      const tableColumns = activeColumns();
       const selected = selectedRow();
-      const selectedColumnIndex = columns.findIndex(([key]) => key === contextSelect.value) + 1;
+      const selectedColumnIndex = tableColumns.findIndex(([key]) => key === contextSelect.value) + 1;
       table.innerHTML = `
-        <caption>${groupSelect.value === "ib" ? "IB Expansion Probability Matrix" : "ON / Previous Day Level Probability Matrix"}</caption>
-        <thead><tr><th>Condition</th>${columns.map(([, label]) => `<th>${label}</th>`).join("")}</tr></thead>
+        <caption>${matrixCaption()}</caption>
+        <thead><tr><th>Condition</th>${tableColumns.map(([, label]) => `<th>${label}</th>`).join("")}</tr></thead>
         <tbody>
           ${rows.map((row) => `
             <tr>
               <td>${row[0]}</td>
-              ${row.slice(1).map((value, index) => `<td class="${valueClass(value)} ${row[0] === selected[0] && index + 1 === selectedColumnIndex ? "matrix-selected" : ""}">${value.toFixed(1)}%</td>`).join("")}
+              ${row.slice(1).map((value, index) => `<td class="${valueClass(value)} ${row[0] === selected[0] && index + 1 === selectedColumnIndex ? "matrix-selected" : ""}">${formatMatrixValue(value)}</td>`).join("")}
             </tr>
           `).join("")}
         </tbody>
@@ -524,11 +584,11 @@
 
     function renderReadout() {
       const row = selectedRow();
-      const columnIndex = columns.findIndex(([key]) => key === contextSelect.value) + 1;
+      const columnIndex = activeColumns().findIndex(([key]) => key === contextSelect.value) + 1;
       const value = row[columnIndex];
       const [tapeTitle, tapeDetails] = tapeRead(value, row[0]);
       const [planTitle, planDetails] = tradePlan(value, row[0], biasSelect.value);
-      document.querySelector("#matrixSelectedProbability").textContent = `${value.toFixed(1)}%`;
+      document.querySelector("#matrixSelectedProbability").textContent = formatMatrixValue(value);
       document.querySelector("#matrixConviction").textContent = conviction(value);
       document.querySelector("#matrixTapeRead").textContent = tapeTitle;
       document.querySelector("#matrixTapeDetails").textContent = tapeDetails;
@@ -537,6 +597,7 @@
     }
 
     function renderMatrix() {
+      populateContextOptions();
       populateConditionOptions();
       renderTable();
       renderReadout();
