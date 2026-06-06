@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Futures Trading Journal</title>
+  <script>
+    if (window.location.hash === "#playbook") {
+      window.location.replace("/playbook.html");
+    }
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -25,7 +30,7 @@
         <a class="active" href="#trade-plan" data-section="trade-plan">Trade Plan</a>
         <a href="#dashboard" data-section="dashboard">Dashboard</a>
         <a href="#trades" data-section="trades">Trades</a>
-        <a href="#playbook" data-section="playbook">Playbook</a>
+        <a href="/playbook.html">Playbook</a>
         <a href="#reports" data-section="reports">Reports</a>
         <a href="#probabilities" data-section="probabilities">Probabilities</a>
         <a href="#stats-matrix" data-section="stats-matrix">Stats Matrix</a>
