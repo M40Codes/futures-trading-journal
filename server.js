@@ -69,7 +69,7 @@ if (express) {
     response.redirect("/login");
   });
   app.use(express.static(__dirname));
-  app.get("/playbook", (_request, response) => response.sendFile(path.join(__dirname, "playbook.html")));
+  app.get("/playbook", (_request, response) => response.redirect("/probabilities.html"));
   app.get("/probabilities", (_request, response) => response.sendFile(path.join(__dirname, "probabilities.html")));
   app.get("/api/tradovate/status", async (_request, response) => sendExpress(response, await handleStatus()));
   app.post("/api/tradovate/connect", async (request, response) => sendExpress(response, await handleConnect(request.body)));
@@ -299,7 +299,8 @@ async function nativeHandler(request, response) {
   }
 
   if (request.method === "GET" && url.pathname === "/playbook") {
-    serveFile(path.join(__dirname, "playbook.html"), response);
+    response.writeHead(302, { Location: "/probabilities.html" });
+    response.end();
     return;
   }
 

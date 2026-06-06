@@ -80,7 +80,6 @@
         <a href="/#trade-plan">Trade Plan</a>
         <a href="/#dashboard">Dashboard</a>
         <a href="/#trades">Trades</a>
-        <a href="/playbook.html">Playbook</a>
         <a href="/#reports">Reports</a>
         <a class="active" href="/probabilities.html">Probabilities</a>
         <a href="/#stats-matrix">Stats Matrix</a>
@@ -93,8 +92,75 @@
       <section class="section-header-panel">
         <div>
           <p class="eyebrow">Conditional Probabilities</p>
-          <h2>Market Matrix</h2>
-          <p>Use the selected condition to see what is happening, where the draw is, and how aggressive the trade should be.</p>
+          <h2>Probabilities & Playbook</h2>
+          <p>Use the bias calculator first, then use the matrix to see what is happening, where the draw is, and how aggressive the trade should be.</p>
+        </div>
+      </section>
+
+      <section class="market-bias-panel">
+        <div class="market-bias-header">
+          <div>
+            <p class="eyebrow">Playbook</p>
+            <h3>NQ Market Bias Calculator</h3>
+            <p>Classify the session using structural truths first, then contextual confirmation.</p>
+          </div>
+          <button class="ghost-button" id="marketBiasResetButton" type="button">Reset Session Inputs</button>
+        </div>
+
+        <div class="market-bias-output-grid">
+          <div class="market-bias-output-card">
+            <span>Bias Score</span>
+            <strong id="marketBiasScore">0.0</strong>
+            <small id="marketBiasDriverCount">0 active inputs</small>
+          </div>
+          <div class="market-bias-output-card">
+            <span>Market Classification</span>
+            <strong id="marketBiasClassification">Balanced</strong>
+            <small id="marketBiasLean">Neutral tape</small>
+          </div>
+          <div class="market-bias-output-card wide">
+            <span>Recommended System</span>
+            <strong id="marketBiasSystem">Mean Reversion System</strong>
+            <small id="marketBiasNarrative">Waiting for live inputs. Start with IB and ON structure.</small>
+          </div>
+        </div>
+
+        <div class="market-bias-input-grid">
+          <label><span>IBH or IBL Structural Truth</span><select id="marketBiasIbhOrIbl"><option value="">Ignore</option><option value="bull">IBH accepted / long structure</option><option value="bear">IBL accepted / short structure</option></select></label>
+          <label><span>ONH or ONL Structural Truth</span><select id="marketBiasOnhOrOnl"><option value="">Ignore</option><option value="bull">ONH accepted / upside draw</option><option value="bear">ONL accepted / downside draw</option></select></label>
+          <label><span>ON MID</span><select id="marketBiasOnMid"><option value="">Ignore</option><option value="bull">Holding above ON MID</option><option value="bear">Holding below ON MID</option></select></label>
+          <label><span>IBH / IBL Context</span><select id="marketBiasIbContext"><option value="">Ignore</option><option value="bull">IBH pressure</option><option value="bear">IBL pressure</option></select></label>
+          <label><span>VWAP Position</span><select id="marketBiasVwap"><option value="">Ignore</option><option value="bull">Above VWAP</option><option value="bear">Below VWAP</option></select></label>
+          <label><span>Cumulative Delta</span><select id="marketBiasDelta"><option value="">Ignore</option><option value="bull">Bull delta</option><option value="bear">Bear delta</option></select></label>
+          <label><span>Volume vs 20-Day Average</span><select id="marketBiasVolume"><option value="">Ignore</option><option value="bull">Above average expansion</option><option value="bear">Below average / weak auction</option></select></label>
+        </div>
+
+        <div class="market-bias-driver-table">
+          <div class="market-bias-driver-head">
+            <span>Input</span>
+            <span>Direction</span>
+            <span>Probability</span>
+            <span>Weight</span>
+            <span>Weighted Impact</span>
+          </div>
+          <div id="marketBiasDriverRows"></div>
+        </div>
+      </section>
+
+      <section class="section-header-panel playbook-performance-header">
+        <div>
+          <p class="eyebrow">Setup Performance</p>
+          <h2>Playbook Stats</h2>
+          <p>Reads saved trades from this browser and summarizes setup performance.</p>
+        </div>
+      </section>
+      <div class="analysis-grid" id="playbookGrid"></div>
+
+      <section class="section-header-panel playbook-performance-header">
+        <div>
+          <p class="eyebrow">Matrix</p>
+          <h2>Probability Matrix</h2>
+          <p>Select the current auction condition and context to get a trade read.</p>
         </div>
       </section>
 
@@ -180,6 +246,166 @@
   </div>
 
   <script>
+    const journalStorageKey = "futures-journal:v2";
+    const biasStorageKey = "nq-market-bias-matrix:v1";
+    const biasDefaults = { ibhOrIbl: 98.9, onhOrOnl: 96.2, onMid: 75.3, ibh: 68.7, ibl: 62.6, standard: 55 };
+    const biasVariables = [
+      { id: "ibhOrIbl", label: "IBH or IBL structural truth", probabilityKey: "ibhOrIbl", weight: 2.5, priority: "High", group: "Structural" },
+      { id: "onhOrOnl", label: "ONH or ONL structural truth", probabilityKey: "onhOrOnl", weight: 2.5, priority: "High", group: "Structural" },
+      { id: "onMid", label: "ON MID", probabilityKey: "onMid", weight: 1.5, priority: "Medium", group: "Structural" },
+      { id: "ibContext", label: "IBH / IBL context", probabilityKey: "ibContext", weight: 1.5, priority: "Medium", group: "Structural" },
+      { id: "vwap", label: "VWAP position", probabilityKey: "standard", weight: 1.0, priority: "Standard", group: "Context" },
+      { id: "delta", label: "Cumulative delta", probabilityKey: "standard", weight: 1.0, priority: "Standard", group: "Context" },
+      { id: "volume", label: "Volume vs 20-day average", probabilityKey: "standard", weight: 1.0, priority: "Standard", group: "Context" },
+    ];
+    const biasInputs = {
+      ibhOrIbl: document.querySelector("#marketBiasIbhOrIbl"),
+      onhOrOnl: document.querySelector("#marketBiasOnhOrOnl"),
+      onMid: document.querySelector("#marketBiasOnMid"),
+      ibContext: document.querySelector("#marketBiasIbContext"),
+      vwap: document.querySelector("#marketBiasVwap"),
+      delta: document.querySelector("#marketBiasDelta"),
+      volume: document.querySelector("#marketBiasVolume"),
+    };
+    let biasState = loadBiasState();
+
+    function loadBiasState() {
+      try {
+        const stored = JSON.parse(localStorage.getItem(biasStorageKey));
+        return { inputs: stored?.inputs || {}, probabilities: { ...biasDefaults, ...(stored?.probabilities || {}) } };
+      } catch {
+        return { inputs: {}, probabilities: { ...biasDefaults } };
+      }
+    }
+
+    function saveBiasState() {
+      localStorage.setItem(biasStorageKey, JSON.stringify(biasState));
+    }
+
+    function num(value, fallback) {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : fallback;
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function sum(values) {
+      return values.reduce((total, value) => total + value, 0);
+    }
+
+    function biasProbabilityFor(variable, direction) {
+      if (variable.id === "ibContext") {
+        return clamp(num(direction === "bull" ? biasState.probabilities.ibh : biasState.probabilities.ibl, direction === "bull" ? biasDefaults.ibh : biasDefaults.ibl), 1, 100);
+      }
+      return clamp(num(biasState.probabilities[variable.probabilityKey], biasDefaults[variable.probabilityKey] || 50), 1, 100);
+    }
+
+    function activeBiasDrivers() {
+      return biasVariables.map((variable) => {
+        const direction = biasState.inputs[variable.id];
+        if (!direction) return null;
+        const probability = biasProbabilityFor(variable, direction);
+        return {
+          ...variable,
+          direction,
+          probability,
+          weightedImpact: probability * variable.weight,
+          signedImpact: (direction === "bull" ? 1 : -1) * probability * variable.weight,
+        };
+      }).filter(Boolean);
+    }
+
+    function classifyBias(score) {
+      if (score > 65) return { label: "Active", system: "Trend-Following System", className: "active" };
+      if (score >= 45) return { label: "Transition", system: "Scalping / Momentum System", className: "transition" };
+      return { label: "Balanced", system: "Mean Reversion System", className: "balanced" };
+    }
+
+    function renderBias() {
+      Object.entries(biasInputs).forEach(([key, input]) => {
+        input.value = biasState.inputs[key] || "";
+      });
+      const active = activeBiasDrivers();
+      const weightedProbability = sum(active.map((driver) => driver.weightedImpact));
+      const maxWeightedProbability = sum(active.map((driver) => driver.weight * 100));
+      const score = maxWeightedProbability ? clamp((weightedProbability / maxWeightedProbability) * 100, 0, 100) : 0;
+      const signedImpact = sum(active.map((driver) => driver.signedImpact));
+      const structuralWeight = sum(active.filter((driver) => driver.group === "Structural").map((driver) => driver.weight));
+      const totalWeight = sum(active.map((driver) => driver.weight));
+      const structuralShare = totalWeight ? (structuralWeight / totalWeight) * 100 : 0;
+      const lean = Math.abs(signedImpact) < 0.01 ? "Neutral tape" : `${signedImpact > 0 ? "Bullish" : "Bearish"} tape`;
+      const classification = classifyBias(score);
+
+      document.querySelector("#marketBiasScore").textContent = score.toFixed(1);
+      document.querySelector("#marketBiasDriverCount").textContent = `${active.length} active ${active.length === 1 ? "input" : "inputs"}`;
+      const classificationNode = document.querySelector("#marketBiasClassification");
+      classificationNode.textContent = classification.label;
+      classificationNode.className = `market-bias-classification ${classification.className}`;
+      document.querySelector("#marketBiasLean").textContent = lean;
+      document.querySelector("#marketBiasSystem").textContent = classification.system;
+      document.querySelector("#marketBiasNarrative").textContent = active.length
+        ? `${classification.label} phase. Structural contribution is ${structuralShare.toFixed(0)}% of active weight, so ${lean.toLowerCase()} is ${structuralShare >= 50 ? "structure-led" : "context-led"}.`
+        : "Waiting for live inputs. Start with IB and ON structure.";
+
+      const rows = document.querySelector("#marketBiasDriverRows");
+      rows.replaceChildren();
+      if (!active.length) {
+        const empty = document.createElement("div");
+        empty.className = "market-bias-driver-row empty";
+        empty.textContent = "No active inputs yet. Select IB/ON structure first, then add VWAP, delta, and volume confirmation.";
+        rows.append(empty);
+      } else {
+        active.sort((a, b) => b.weight - a.weight || b.probability - a.probability).forEach((driver) => {
+          const row = document.createElement("div");
+          row.className = `market-bias-driver-row ${driver.group === "Structural" ? "structural-driver" : ""}`;
+          row.innerHTML = `<span>${driver.label}<small>${driver.priority} probability / ${driver.group}</small></span><span class="${driver.direction === "bull" ? "profit" : "loss"}">${driver.direction === "bull" ? "Bullish" : "Bearish"}</span><span>${driver.probability.toFixed(1)}%</span><span>${driver.weight.toFixed(1)}x</span><span>${driver.weightedImpact.toFixed(1)}</span>`;
+          rows.append(row);
+        });
+      }
+      saveBiasState();
+    }
+
+    function renderSetupPerformance() {
+      const grid = document.querySelector("#playbookGrid");
+      grid.replaceChildren();
+      let trades = [];
+      try { trades = JSON.parse(localStorage.getItem(journalStorageKey)) || []; } catch {}
+      const groups = new Map();
+      trades.forEach((trade) => {
+        const setup = trade.setup || "Unlabeled";
+        const row = groups.get(setup) || { trades: 0, wins: 0, net: 0 };
+        row.trades += 1;
+        row.wins += Number(trade.profitLoss) > 0 ? 1 : 0;
+        row.net += Number(trade.profitLoss) || 0;
+        groups.set(setup, row);
+      });
+      if (!groups.size) {
+        const card = document.createElement("article");
+        card.className = "analysis-card";
+        card.innerHTML = "<h3>No setup data yet</h3><div><span>Status</span><strong>Log trades with setup names to build your playbook.</strong></div>";
+        grid.append(card);
+        return;
+      }
+      [...groups.entries()].sort((a, b) => b[1].trades - a[1].trades || b[1].net - a[1].net).forEach(([setup, stats]) => {
+        const card = document.createElement("article");
+        card.className = `analysis-card ${stats.net >= 0 ? "positive-card" : "negative-card"}`;
+        const winRate = stats.trades ? ((stats.wins / stats.trades) * 100).toFixed(1) : "0.0";
+        card.innerHTML = `<h3>${setup}</h3><div><span>Trades</span><strong>${stats.trades}</strong></div><div><span>Win Rate</span><strong>${winRate}%</strong></div><div><span>Net P&L</span><strong>$${stats.net.toFixed(2)}</strong></div>`;
+        grid.append(card);
+      });
+    }
+
+    Object.entries(biasInputs).forEach(([key, input]) => input.addEventListener("change", () => {
+      biasState.inputs[key] = input.value;
+      renderBias();
+    }));
+    document.querySelector("#marketBiasResetButton").addEventListener("click", () => {
+      biasState.inputs = {};
+      renderBias();
+    });
+
     const columns = [
       ["all", "All"],
       ["inRange", "In Range"],
@@ -319,6 +545,8 @@
     [groupSelect, conditionSelect, contextSelect, biasSelect].forEach((input) => {
       input.addEventListener("change", renderMatrix);
     });
+    renderBias();
+    renderSetupPerformance();
     renderMatrix();
   </script>
 </body>
