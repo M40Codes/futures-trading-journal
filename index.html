@@ -5,8 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Futures Trading Journal</title>
   <script>
-    if (window.location.hash === "#playbook") {
-      window.location.replace("/playbook.html");
+    const standaloneRoutes = {
+      "#playbook": "/playbook.html",
+      "#probabilities": "/probabilities.html",
+    };
+    if (standaloneRoutes[window.location.hash]) {
+      window.location.replace(standaloneRoutes[window.location.hash]);
     }
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -32,7 +36,7 @@
         <a href="#trades" data-section="trades">Trades</a>
         <a href="/playbook.html">Playbook</a>
         <a href="#reports" data-section="reports">Reports</a>
-        <a href="#probabilities" data-section="probabilities">Probabilities</a>
+        <a href="/probabilities.html">Probabilities</a>
         <a href="#stats-matrix" data-section="stats-matrix">Stats Matrix</a>
         <a href="#bias-calculator" data-section="bias-calculator">NQ Bias</a>
       </nav>

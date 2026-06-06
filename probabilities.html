@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Probabilities - Market Matrix</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=probability-matrix-20260606">
+  <style>
+    .app-section { display: block !important; }
+    .prob-page-shell { width: min(100% - 48px, 1540px); margin: 0 auto; padding: 26px 0 110px; }
+    .prob-proof { margin-bottom: 12px; color: #2dd4bf; font-size: 0.72rem; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; }
+    .matrix-control-panel,
+    .matrix-table-panel,
+    .matrix-read-panel {
+      border: 1px solid rgba(96, 165, 250, 0.24);
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(10, 17, 31, 0.98));
+      padding: 18px;
+    }
+    .matrix-control-panel { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
+    .matrix-read-grid { display: grid; grid-template-columns: 1fr 1fr 1.4fr; gap: 12px; margin-bottom: 14px; }
+    .matrix-read-card {
+      border: 1px solid rgba(96, 165, 250, 0.26);
+      border-radius: 8px;
+      padding: 16px;
+      background: rgba(30, 41, 79, 0.38);
+    }
+    .matrix-read-card span,
+    .probability-matrix th {
+      color: #b7c7ef;
+      font-size: 0.72rem;
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .matrix-read-card strong { display: block; margin-top: 10px; font-size: clamp(1.6rem, 3vw, 3rem); line-height: 1; }
+    .matrix-read-card p { margin-top: 10px; }
+    .matrix-table-panel { overflow-x: auto; margin-bottom: 14px; }
+    .probability-matrix { width: 100%; min-width: 980px; border-collapse: separate; border-spacing: 0; }
+    .probability-matrix caption { text-align: left; margin-bottom: 12px; color: #fff; font-size: 1.1rem; font-weight: 900; }
+    .probability-matrix th,
+    .probability-matrix td { border-bottom: 1px solid rgba(148, 163, 184, 0.16); padding: 10px 9px; text-align: center; }
+    .probability-matrix th:first-child,
+    .probability-matrix td:first-child { position: sticky; left: 0; z-index: 1; background: #0b1220; text-align: left; font-weight: 900; }
+    .probability-matrix td { color: #e5edf9; font-weight: 800; }
+    .matrix-hot { background: rgba(45, 212, 191, 0.26); color: #dffef8 !important; }
+    .matrix-good { background: rgba(34, 197, 94, 0.16); }
+    .matrix-mid { background: rgba(250, 204, 21, 0.10); }
+    .matrix-cold { background: rgba(251, 113, 133, 0.11); color: #fecdd3 !important; }
+    .matrix-selected { outline: 2px solid #2dd4bf; outline-offset: -2px; box-shadow: inset 0 0 0 999px rgba(45, 212, 191, 0.12); }
+    .matrix-playbook-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .matrix-playbook-list article {
+      border: 1px solid rgba(96, 165, 250, 0.22);
+      border-radius: 8px;
+      padding: 14px;
+      background: rgba(15, 23, 42, 0.7);
+    }
+    .matrix-playbook-list h3 { margin-bottom: 8px; font-size: 1rem; }
+    @media (max-width: 1180px) {
+      .matrix-control-panel,
+      .matrix-read-grid,
+      .matrix-playbook-list { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 820px) {
+      .prob-page-shell { width: min(100% - 20px, 1480px); padding-top: 18px; }
+      .matrix-control-panel,
+      .matrix-read-grid,
+      .matrix-playbook-list { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-frame">
+    <aside class="sidebar" aria-label="Journal navigation">
+      <div class="brand-mark">FJ</div>
+      <nav>
+        <a href="/#trade-plan">Trade Plan</a>
+        <a href="/#dashboard">Dashboard</a>
+        <a href="/#trades">Trades</a>
+        <a href="/playbook.html">Playbook</a>
+        <a href="/#reports">Reports</a>
+        <a class="active" href="/probabilities.html">Probabilities</a>
+        <a href="/#stats-matrix">Stats Matrix</a>
+        <a href="/#bias-calculator">NQ Bias</a>
+      </nav>
+    </aside>
+
+    <main class="prob-page-shell">
+      <p class="prob-proof">Standalone Probabilities Loaded</p>
+      <section class="section-header-panel">
+        <div>
+          <p class="eyebrow">Conditional Probabilities</p>
+          <h2>Market Matrix</h2>
+          <p>Use the selected condition to see what is happening, where the draw is, and how aggressive the trade should be.</p>
+        </div>
+      </section>
+
+      <section class="matrix-control-panel">
+        <label>
+          <span>Matrix Group</span>
+          <select id="matrixGroup">
+            <option value="target">ON / Previous Day Levels</option>
+            <option value="ib">IB Expansion Levels</option>
+          </select>
+        </label>
+        <label>
+          <span>What is in play?</span>
+          <select id="matrixCondition"></select>
+        </label>
+        <label>
+          <span>Context Column</span>
+          <select id="matrixContext">
+            <option value="all">All</option>
+            <option value="inRange">In Range</option>
+            <option value="outRange">Out Range</option>
+            <option value="hir">HIR</option>
+            <option value="lir">LIR</option>
+            <option value="hor">HOR</option>
+            <option value="lor">LOR</option>
+          </select>
+        </label>
+        <label>
+          <span>Trade Direction</span>
+          <select id="matrixBias">
+            <option value="long">Looking Long</option>
+            <option value="short">Looking Short</option>
+            <option value="balanced">Balanced / No Bias</option>
+          </select>
+        </label>
+      </section>
+
+      <section class="matrix-read-grid">
+        <div class="matrix-read-card">
+          <span>Selected Probability</span>
+          <strong id="matrixSelectedProbability">--</strong>
+          <p id="matrixConviction">Select a condition.</p>
+        </div>
+        <div class="matrix-read-card">
+          <span>What Is Happening</span>
+          <strong id="matrixTapeRead">Waiting</strong>
+          <p id="matrixTapeDetails">Choose the active auction condition above.</p>
+        </div>
+        <div class="matrix-read-card">
+          <span>How To Trade It</span>
+          <strong id="matrixTradePlan">Stand aside</strong>
+          <p id="matrixTradeDetails">The matrix will classify the setup as trend-follow, scalp, mean-revert, or pass.</p>
+        </div>
+      </section>
+
+      <section class="matrix-table-panel">
+        <table class="probability-matrix" id="targetMatrix"></table>
+      </section>
+
+      <section class="matrix-read-panel">
+        <div class="section-header-panel">
+          <div>
+            <p class="eyebrow">Execution Rules</p>
+            <h2>How To Use The Matrix</h2>
+          </div>
+        </div>
+        <div class="matrix-playbook-list">
+          <article>
+            <h3>65% Rule</h3>
+            <p>Above 65% is a tradable draw. Look for entry model confirmation instead of forcing market orders.</p>
+          </article>
+          <article>
+            <h3>80%+ Magnet</h3>
+            <p>Very strong historical draw. Favor continuation toward the level unless structure invalidates.</p>
+          </article>
+          <article>
+            <h3>Below 55%</h3>
+            <p>Weak edge. Treat it as secondary context, reduce size, or wait for a cleaner level.</p>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const columns = [
+      ["all", "All"],
+      ["inRange", "In Range"],
+      ["outRange", "Out Range"],
+      ["hir", "HIR"],
+      ["lir", "LIR"],
+      ["hor", "HOR"],
+      ["lor", "LOR"],
+    ];
+    const targetRows = [
+      ["ONH or ONL", 96.2, 97.4, 94.0, 97.7, 96.9, 99.1, 85.2],
+      ["ON/VPOC", 82.1, 82.8, 80.8, 83.2, 82.3, 84.0, 75.4],
+      ["pVAH or pVAL", 78.5, 90.8, 56.3, 89.6, 92.3, 61.3, 47.5],
+      ["pHI or pLO", 78.1, 83.5, 68.3, 80.9, 86.9, 68.9, 67.2],
+      ["ON/MID", 75.3, 78.5, 69.5, 76.3, 81.5, 71.7, 65.6],
+      ["ONH", 67.2, 69.3, 63.5, 79.2, 56.2, 78.3, 37.7],
+      ["pCL", 64.0, 73.9, 46.1, 71.1, 77.7, 49.1, 41.0],
+      ["pVAH", 60.0, 66.3, 48.5, 73.4, 56.9, 61.3, 26.2],
+      ["pVPOC", 58.9, 69.0, 40.7, 69.4, 68.5, 43.4, 36.1],
+      ["pMid", 55.3, 67.7, 32.9, 67.6, 67.7, 33.0, 32.8],
+      ["ONL", 54.9, 57.1, 50.9, 50.3, 66.2, 42.5, 65.6],
+      ["pHI", 53.2, 54.5, 50.9, 62.4, 43.8, 68.9, 19.7],
+      ["pVAL", 50.0, 58.7, 34.1, 50.9, 69.2, 26.4, 47.5],
+      ["pLO", 36.8, 38.3, 34.1, 28.3, 51.5, 15.1, 67.2],
+      ["pVAH & pVAL", 31.5, 34.3, 26.3, 34.7, 33.8, 26.4, 26.2],
+      ["ONH & ONL", 26.0, 29.0, 20.4, 31.8, 25.4, 21.7, 18.0],
+      ["pHI & pLO", 11.9, 9.2, 16.8, 9.8, 8.5, 15.1, 19.7],
+    ];
+    const ibRows = [
+      ["IBH or IBL", 98.9, 99.0, 98.8, 98.8, 99.2, 99.1, 98.4],
+      ["1.5xIBH or 1.5xIBL", 75.1, 73.9, 77.2, 74.6, 73.1, 81.1, 70.5],
+      ["IBH", 68.7, 70.3, 65.9, 68.8, 72.3, 60.4, 75.4],
+      ["IBL", 62.6, 65.0, 58.1, 65.9, 63.8, 62.3, 50.8],
+      ["2.0xIBH or 2.0xIBL", 42.6, 42.6, 42.5, 41.6, 43.8, 45.3, 37.7],
+      ["1.5xIBH", 41.5, 43.2, 38.3, 44.5, 41.5, 38.7, 37.7],
+      ["1.5xIBL", 39.4, 37.3, 43.1, 38.7, 35.4, 48.1, 34.4],
+      ["IBH & IBL", 32.3, 36.3, 25.1, 35.8, 36.9, 23.6, 27.9],
+      ["2.0xIBL", 23.0, 22.1, 24.6, 21.4, 23.1, 28.3, 18.0],
+      ["2.0xIBH", 20.9, 22.1, 18.6, 22.5, 21.5, 17.0, 21.3],
+      ["1.5xIBH & 1.5xIBL", 5.7, 6.6, 4.2, 8.7, 3.8, 5.7, 1.6],
+      ["2.0xIBH & 2.0xIBL", 1.3, 1.7, 0.6, 2.3, 0.8, 0.0, 1.6],
+    ];
+
+    const groupSelect = document.querySelector("#matrixGroup");
+    const conditionSelect = document.querySelector("#matrixCondition");
+    const contextSelect = document.querySelector("#matrixContext");
+    const biasSelect = document.querySelector("#matrixBias");
+
+    function rowsForGroup() {
+      return groupSelect.value === "ib" ? ibRows : targetRows;
+    }
+
+    function selectedRow() {
+      return rowsForGroup().find((row) => row[0] === conditionSelect.value) || rowsForGroup()[0];
+    }
+
+    function valueClass(value) {
+      if (value >= 80) return "matrix-hot";
+      if (value >= 65) return "matrix-good";
+      if (value >= 55) return "matrix-mid";
+      return "matrix-cold";
+    }
+
+    function conviction(value) {
+      if (value >= 80) return "Elite magnet. Prioritize this draw if entry and R:R align.";
+      if (value >= 65) return "High-conviction draw. Trade with confirmation toward the level.";
+      if (value >= 55) return "Moderate edge. Scalp or wait for better location.";
+      return "Weak probability. Secondary target only, or pass.";
+    }
+
+    function tradePlan(value, rowName, bias) {
+      if (value < 55) return ["Pass / wait", `${rowName} is not strong enough in this context. Do not force a trade.`];
+      if (bias === "balanced") return ["Wait for location", `${rowName} is active, but without directional bias use it as a target/fade reference.`];
+      if (value >= 80) return ["Continuation priority", `Use pullbacks/retests toward ${rowName}. Avoid fading the draw until it is tagged or invalidated.`];
+      if (value >= 65) return [bias === "long" ? "Long continuation setup" : "Short continuation setup", `Look for confirmation, then target ${rowName}. Keep stop behind the structure that created the read.`];
+      return ["Scalp only", `${rowName} has a moderate read. Take smaller size and quicker profits.`];
+    }
+
+    function tapeRead(value, rowName) {
+      if (value >= 80) return ["Strong liquidity draw", `${rowName} is behaving like the main auction magnet.`];
+      if (value >= 65) return ["Tradable draw", `${rowName} is in play, but still needs entry confirmation.`];
+      if (value >= 55) return ["Mixed auction", `${rowName} matters, but the edge is not dominant.`];
+      return ["Low-quality read", `${rowName} is weak in this context.`];
+    }
+
+    function populateConditionOptions() {
+      const current = conditionSelect.value;
+      conditionSelect.replaceChildren();
+      rowsForGroup().forEach((row) => {
+        const option = document.createElement("option");
+        option.value = row[0];
+        option.textContent = row[0];
+        conditionSelect.append(option);
+      });
+      conditionSelect.value = rowsForGroup().some((row) => row[0] === current) ? current : rowsForGroup()[0][0];
+    }
+
+    function renderTable() {
+      const table = document.querySelector("#targetMatrix");
+      const rows = rowsForGroup();
+      const selected = selectedRow();
+      const selectedColumnIndex = columns.findIndex(([key]) => key === contextSelect.value) + 1;
+      table.innerHTML = `
+        <caption>${groupSelect.value === "ib" ? "IB Expansion Probability Matrix" : "ON / Previous Day Level Probability Matrix"}</caption>
+        <thead><tr><th>Condition</th>${columns.map(([, label]) => `<th>${label}</th>`).join("")}</tr></thead>
+        <tbody>
+          ${rows.map((row) => `
+            <tr>
+              <td>${row[0]}</td>
+              ${row.slice(1).map((value, index) => `<td class="${valueClass(value)} ${row[0] === selected[0] && index + 1 === selectedColumnIndex ? "matrix-selected" : ""}">${value.toFixed(1)}%</td>`).join("")}
+            </tr>
+          `).join("")}
+        </tbody>
+      `;
+    }
+
+    function renderReadout() {
+      const row = selectedRow();
+      const columnIndex = columns.findIndex(([key]) => key === contextSelect.value) + 1;
+      const value = row[columnIndex];
+      const [tapeTitle, tapeDetails] = tapeRead(value, row[0]);
+      const [planTitle, planDetails] = tradePlan(value, row[0], biasSelect.value);
+      document.querySelector("#matrixSelectedProbability").textContent = `${value.toFixed(1)}%`;
+      document.querySelector("#matrixConviction").textContent = conviction(value);
+      document.querySelector("#matrixTapeRead").textContent = tapeTitle;
+      document.querySelector("#matrixTapeDetails").textContent = tapeDetails;
+      document.querySelector("#matrixTradePlan").textContent = planTitle;
+      document.querySelector("#matrixTradeDetails").textContent = planDetails;
+    }
+
+    function renderMatrix() {
+      populateConditionOptions();
+      renderTable();
+      renderReadout();
+    }
+
+    [groupSelect, conditionSelect, contextSelect, biasSelect].forEach((input) => {
+      input.addEventListener("change", renderMatrix);
+    });
+    renderMatrix();
+  </script>
+</body>
+</html>
