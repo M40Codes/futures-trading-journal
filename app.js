@@ -2,6 +2,7 @@ const STORAGE_KEY = "futures-journal:v2";
 const SCORE_STORAGE_KEY = "futures-scorecard:v1";
 const SCREENSHOT_STORAGE_KEY = "futures-screenshots:v1";
 const BIAS_STORAGE_KEY = "nq-bias-calculator:v1";
+const MARKET_BIAS_STORAGE_KEY = "nq-market-bias-matrix:v1";
 
 const CONTRACTS = {
   ES: { name: "E-mini S&P 500", pointValue: 50 },
@@ -64,6 +65,33 @@ const probabilityDimension = document.querySelector("#probabilityDimension");
 const probabilityRows = document.querySelector("#probabilityRows");
 const probabilityChartGrid = document.querySelector("#probabilityChartGrid");
 const playbookGrid = document.querySelector("#playbookGrid");
+const marketBiasInputs = {
+  ibhOrIbl: document.querySelector("#marketBiasIbhOrIbl"),
+  onhOrOnl: document.querySelector("#marketBiasOnhOrOnl"),
+  onMid: document.querySelector("#marketBiasOnMid"),
+  ibContext: document.querySelector("#marketBiasIbContext"),
+  vwap: document.querySelector("#marketBiasVwap"),
+  delta: document.querySelector("#marketBiasDelta"),
+  volume: document.querySelector("#marketBiasVolume"),
+};
+const marketBiasProbInputs = {
+  ibhOrIbl: document.querySelector("#marketBiasProbIbhOrIbl"),
+  onhOrOnl: document.querySelector("#marketBiasProbOnhOrOnl"),
+  onMid: document.querySelector("#marketBiasProbOnMid"),
+  ibh: document.querySelector("#marketBiasProbIbh"),
+  ibl: document.querySelector("#marketBiasProbIbl"),
+  standard: document.querySelector("#marketBiasProbStandard"),
+};
+const marketBiasOutput = {
+  score: document.querySelector("#marketBiasScore"),
+  driverCount: document.querySelector("#marketBiasDriverCount"),
+  classification: document.querySelector("#marketBiasClassification"),
+  lean: document.querySelector("#marketBiasLean"),
+  system: document.querySelector("#marketBiasSystem"),
+  narrative: document.querySelector("#marketBiasNarrative"),
+  rows: document.querySelector("#marketBiasDriverRows"),
+  reset: document.querySelector("#marketBiasResetButton"),
+};
 const reportsGrid = document.querySelector("#reportsGrid");
 const rrInputs = {
   entry: document.querySelector("#rrEntryPrice"),
@@ -379,6 +407,25 @@ const DEFAULT_BIAS_STATS = [
   { key: "prior_low", description: "Prior low first", bull: 38.00, weight: 0.85, notes: "Editable structure stat" },
 ];
 
+const MARKET_BIAS_VARIABLES = [
+  { id: "ibhOrIbl", label: "IBH or IBL structural truth", probabilityKey: "ibhOrIbl", weight: 2.5, priority: "High", group: "Structural" },
+  { id: "onhOrOnl", label: "ONH or ONL structural truth", probabilityKey: "onhOrOnl", weight: 2.5, priority: "High", group: "Structural" },
+  { id: "onMid", label: "ON MID", probabilityKey: "onMid", weight: 1.5, priority: "Medium", group: "Structural" },
+  { id: "ibContext", label: "IBH / IBL context", probabilityKey: "ibContext", weight: 1.5, priority: "Medium", group: "Structural" },
+  { id: "vwap", label: "VWAP position", probabilityKey: "standard", weight: 1.0, priority: "Standard", group: "Context" },
+  { id: "delta", label: "Cumulative delta", probabilityKey: "standard", weight: 1.0, priority: "Standard", group: "Context" },
+  { id: "volume", label: "Volume vs 20-day average", probabilityKey: "standard", weight: 1.0, priority: "Standard", group: "Context" },
+];
+
+const MARKET_BIAS_DEFAULT_PROBABILITIES = {
+  ibhOrIbl: 98.9,
+  onhOrOnl: 96.2,
+  onMid: 75.3,
+  ibh: 68.7,
+  ibl: 62.6,
+  standard: 55,
+};
+
 const SESSION_WINDOWS = [
   { name: "Globex", open: 18 * 60, close: 17 * 60 },
   { name: "Asia", open: 20 * 60, close: 24 * 60 },
@@ -392,6 +439,7 @@ let scorecards = loadScorecard();
 let screenshots = loadScreenshots();
 let tradePlans = loadTradePlans();
 let biasState = loadBiasState();
+let marketBiasState = loadMarketBiasState();
 let editingId = null;
 let calendarDate = new Date();
 let serverSyncReady = false;
@@ -423,6 +471,7 @@ renderScorecard();
 renderScreenshot();
 renderTradePlan();
 renderBiasCalculator();
+renderMarketBiasCalculator();
 renderRrValidator();
 render();
 updateClockBar();
@@ -521,6 +570,19 @@ nextMonthButton.addEventListener("click", () => changeCalendarMonth(1));
 tradovateConnectButton.addEventListener("click", connectTradovate);
 tradovateSyncButton.addEventListener("click", syncTradovateTrades);
 probabilityDimension.addEventListener("change", () => renderProbabilities(trades));
+Object.entries(marketBiasInputs).forEach(([key, input]) => {
+  input?.addEventListener("change", () => {
+    marketBiasState.inputs[key] = input.value;
+    renderMarketBiasCalculator();
+  });
+});
+Object.entries(marketBiasProbInputs).forEach(([key, input]) => {
+  input?.addEventListener("input", () => {
+    marketBiasState.probabilities[key] = numberOrDefault(input.value, MARKET_BIAS_DEFAULT_PROBABILITIES[key] ?? 50);
+    renderMarketBiasCalculator();
+  });
+});
+marketBiasOutput.reset?.addEventListener("click", resetMarketBiasInputs);
 sectionLinks.forEach((link) => {
   link.addEventListener("click", (event) => {
     event.preventDefault();
@@ -827,6 +889,22 @@ function loadBiasState() {
   } catch {
     return { inputs: {}, stats: structuredClone(DEFAULT_BIAS_STATS) };
   }
+}
+
+function loadMarketBiasState() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(MARKET_BIAS_STORAGE_KEY));
+    return {
+      inputs: stored?.inputs ?? {},
+      probabilities: { ...MARKET_BIAS_DEFAULT_PROBABILITIES, ...(stored?.probabilities ?? {}) },
+    };
+  } catch {
+    return { inputs: {}, probabilities: { ...MARKET_BIAS_DEFAULT_PROBABILITIES } };
+  }
+}
+
+function saveMarketBiasState() {
+  localStorage.setItem(MARKET_BIAS_STORAGE_KEY, JSON.stringify(marketBiasState));
 }
 
 function saveBiasState() {
@@ -1371,6 +1449,7 @@ function renderSecondarySections() {
   renderProbabilities(trades);
   renderStatsMatrix();
   renderBiasCalculator();
+  renderMarketBiasCalculator();
 }
 
 function renderScorecard() {
@@ -2142,6 +2221,11 @@ function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
+function numberOrDefault(value, fallback) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
 function escapeAttribute(value) {
   return String(value ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 }
@@ -2333,6 +2417,132 @@ function renderRecentTrades(items) {
     `;
     recentTradesList.append(row);
   });
+}
+
+function renderMarketBiasCalculator() {
+  if (!marketBiasOutput.score || !marketBiasOutput.rows) return;
+  hydrateMarketBiasControls();
+  const active = activeMarketBiasDrivers();
+  const result = calculateMarketBias(active);
+  const classification = classifyMarketBias(result.score);
+
+  marketBiasOutput.score.textContent = result.score.toFixed(1);
+  marketBiasOutput.driverCount.textContent = `${active.length} active ${active.length === 1 ? "input" : "inputs"}`;
+  marketBiasOutput.classification.textContent = classification.label;
+  marketBiasOutput.classification.className = `market-bias-classification ${classification.className}`;
+  marketBiasOutput.lean.textContent = result.lean;
+  marketBiasOutput.system.textContent = classification.system;
+  marketBiasOutput.narrative.textContent = active.length
+    ? `${classification.label} phase. Structural contribution is ${result.structuralShare.toFixed(0)}% of active weight, so ${result.lean.toLowerCase()} is ${result.structuralShare >= 50 ? "structure-led" : "context-led"}.`
+    : "Waiting for live inputs. Start with IB and ON structure.";
+  renderMarketBiasDrivers(active);
+  saveMarketBiasState();
+}
+
+function hydrateMarketBiasControls() {
+  Object.entries(marketBiasInputs).forEach(([key, input]) => {
+    if (input && input.value !== (marketBiasState.inputs[key] ?? "")) {
+      input.value = marketBiasState.inputs[key] ?? "";
+    }
+  });
+  Object.entries(marketBiasProbInputs).forEach(([key, input]) => {
+    if (input) {
+      const value = marketBiasState.probabilities[key] ?? MARKET_BIAS_DEFAULT_PROBABILITIES[key] ?? 50;
+      input.value = Number(value).toFixed(1);
+    }
+  });
+}
+
+function activeMarketBiasDrivers() {
+  return MARKET_BIAS_VARIABLES
+    .map((variable) => {
+      const direction = marketBiasState.inputs[variable.id];
+      if (!direction) return null;
+      const probability = marketBiasProbabilityFor(variable, direction);
+      return {
+        ...variable,
+        direction,
+        probability,
+        weightedImpact: probability * variable.weight,
+        signedImpact: (direction === "bull" ? 1 : -1) * probability * variable.weight,
+      };
+    })
+    .filter(Boolean);
+}
+
+function marketBiasProbabilityFor(variable, direction) {
+  if (variable.id === "ibContext") {
+    return clamp(numberOrDefault(
+      direction === "bull" ? marketBiasState.probabilities.ibh : marketBiasState.probabilities.ibl,
+      direction === "bull" ? MARKET_BIAS_DEFAULT_PROBABILITIES.ibh : MARKET_BIAS_DEFAULT_PROBABILITIES.ibl
+    ), 1, 100);
+  }
+  return clamp(numberOrDefault(
+    marketBiasState.probabilities[variable.probabilityKey],
+    MARKET_BIAS_DEFAULT_PROBABILITIES[variable.probabilityKey] ?? 50
+  ), 1, 100);
+}
+
+function calculateMarketBias(active) {
+  if (!active.length) {
+    return { score: 0, lean: "Neutral tape", structuralShare: 0 };
+  }
+  const weightedProbability = sum(active.map((driver) => driver.weightedImpact));
+  const maxWeightedProbability = sum(active.map((driver) => driver.weight * 100));
+  const score = maxWeightedProbability ? (weightedProbability / maxWeightedProbability) * 100 : 0;
+  const signedImpact = sum(active.map((driver) => driver.signedImpact));
+  const structuralWeight = sum(active.filter((driver) => driver.group === "Structural").map((driver) => driver.weight));
+  const totalWeight = sum(active.map((driver) => driver.weight));
+  const structuralShare = totalWeight ? (structuralWeight / totalWeight) * 100 : 0;
+  const lean = Math.abs(signedImpact) < 0.01
+    ? "Neutral tape"
+    : `${signedImpact > 0 ? "Bullish" : "Bearish"} tape`;
+
+  return { score: clamp(score, 0, 100), lean, structuralShare };
+}
+
+function classifyMarketBias(score) {
+  if (score > 65) {
+    return { label: "Active", system: "Trend-Following System", className: "active" };
+  }
+  if (score >= 45) {
+    return { label: "Transition", system: "Scalping / Momentum System", className: "transition" };
+  }
+  return { label: "Balanced", system: "Mean Reversion System", className: "balanced" };
+}
+
+function renderMarketBiasDrivers(active) {
+  marketBiasOutput.rows.replaceChildren();
+  if (!active.length) {
+    const empty = document.createElement("div");
+    empty.className = "market-bias-driver-row empty";
+    empty.textContent = "No active inputs yet. Select IB/ON structure first, then add VWAP, delta, and volume confirmation.";
+    marketBiasOutput.rows.append(empty);
+    return;
+  }
+
+  active
+    .sort((a, b) => b.weight - a.weight || b.probability - a.probability)
+    .forEach((driver) => {
+      const row = document.createElement("div");
+      row.className = `market-bias-driver-row ${driver.group === "Structural" ? "structural-driver" : ""}`;
+      row.innerHTML = `
+        <span>${driver.label}<small>${driver.priority} probability / ${driver.group}</small></span>
+        <span class="${driver.direction === "bull" ? "profit" : "loss"}">${driver.direction === "bull" ? "Bullish" : "Bearish"}</span>
+        <span>${driver.probability.toFixed(1)}%</span>
+        <span>${driver.weight.toFixed(1)}x</span>
+        <span>${driver.weightedImpact.toFixed(1)}</span>
+      `;
+      marketBiasOutput.rows.append(row);
+    });
+}
+
+function resetMarketBiasInputs() {
+  marketBiasState.inputs = {};
+  Object.values(marketBiasInputs).forEach((input) => {
+    if (input) input.value = "";
+  });
+  renderMarketBiasCalculator();
 }
 
 function renderPlaybook(items) {

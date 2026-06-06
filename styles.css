@@ -483,6 +483,148 @@ p {
   text-align: right;
 }
 
+.market-bias-panel {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 18px;
+  padding: 18px;
+  border: 1px solid rgba(96, 165, 250, 0.24);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(10, 17, 31, 0.98));
+}
+
+.market-bias-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: start;
+}
+
+.market-bias-header h3 {
+  margin: 4px 0 6px;
+  font-size: 1.35rem;
+}
+
+.market-bias-output-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.market-bias-output-card {
+  min-height: 128px;
+  padding: 16px;
+  border: 1px solid rgba(96, 165, 250, 0.26);
+  border-radius: 8px;
+  background: rgba(30, 41, 79, 0.38);
+}
+
+.market-bias-output-card.wide {
+  grid-column: span 2;
+}
+
+.market-bias-output-card span,
+.market-bias-driver-head {
+  color: #b7c7ef;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.market-bias-output-card strong {
+  display: block;
+  margin-top: 10px;
+  font-size: clamp(1.4rem, 3vw, 2.6rem);
+  line-height: 1;
+}
+
+.market-bias-output-card small {
+  display: block;
+  margin-top: 10px;
+  color: #b8c7e6;
+  font-weight: 800;
+}
+
+.market-bias-classification.active {
+  color: var(--win);
+}
+
+.market-bias-classification.transition {
+  color: #fbbf24;
+}
+
+.market-bias-classification.balanced {
+  color: #93c5fd;
+}
+
+.market-bias-input-grid,
+.market-bias-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.market-bias-driver-table {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.market-bias-driver-head,
+.market-bias-driver-row {
+  display: grid;
+  grid-template-columns: minmax(240px, 1.4fr) repeat(4, minmax(110px, 0.6fr));
+  gap: 12px;
+  align-items: center;
+  min-width: 820px;
+  padding: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.market-bias-driver-row:last-child {
+  border-bottom: 0;
+}
+
+.market-bias-driver-row.structural-driver {
+  background: rgba(45, 212, 191, 0.06);
+}
+
+.market-bias-driver-row.empty {
+  display: block;
+  min-width: 0;
+  color: #b8c7e6;
+  font-weight: 800;
+}
+
+.market-bias-driver-row small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.market-bias-settings {
+  border: 1px dashed rgba(96, 165, 250, 0.28);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(96, 165, 250, 0.05);
+}
+
+.market-bias-settings summary {
+  cursor: pointer;
+  color: #c7d7ff;
+  font-weight: 900;
+}
+
+.market-bias-settings-grid {
+  margin-top: 12px;
+}
+
+.playbook-performance-header {
+  margin-top: 8px;
+}
+
 .positive-card {
   border-color: rgba(52, 211, 153, 0.32);
 }
@@ -2030,6 +2172,9 @@ td {
   .connector-panel,
   .rr-validator-panel,
   .analysis-grid,
+  .market-bias-output-grid,
+  .market-bias-input-grid,
+  .market-bias-settings-grid,
   .market-context-grid,
   .market-live-panel,
   .in-play-grid,
@@ -2089,6 +2234,7 @@ td {
 
   .topbar,
   .section-header-panel,
+  .market-bias-header,
   .panel-toolbar,
   .tradingview-sync-panel {
     align-items: flex-start;
@@ -2100,6 +2246,9 @@ td {
   .connector-panel,
   .rr-validator-panel,
   .analysis-grid,
+  .market-bias-output-grid,
+  .market-bias-input-grid,
+  .market-bias-settings-grid,
   .probability-chart-grid,
   .market-context-grid,
   .market-live-panel,
@@ -2118,6 +2267,10 @@ td {
   .workspace,
   .field-grid {
     grid-template-columns: 1fr;
+  }
+
+  .market-bias-output-card.wide {
+    grid-column: auto;
   }
 
   .scorecard-header,
