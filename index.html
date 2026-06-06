@@ -515,7 +515,22 @@
           <div class="field-grid">
             <label>
               <span>Setup</span>
-              <input id="setup" name="setup" type="text" placeholder="ORB, VWAP reclaim, trend pullback">
+              <input id="setup" name="setup" type="text" list="setupOptions" placeholder="Choose setup or type custom">
+              <datalist id="setupOptions">
+                <option value="Gap fill short"></option>
+                <option value="Gap fill long"></option>
+                <option value="IB mid long"></option>
+                <option value="IB mid short"></option>
+                <option value="IB Close long"></option>
+                <option value="IB Close short"></option>
+                <option value="HTF sweep- LTF inversion long"></option>
+                <option value="HTF sweep- LTF inversion short"></option>
+                <option value="PDVAH rejection short"></option>
+                <option value="PDVAL rejection short"></option>
+                <option value="PDVAH acceptance long"></option>
+                <option value="PDVAL acceptance long"></option>
+                <option value="VWAP reclaim long on a trend day"></option>
+              </datalist>
             </label>
             <label>
               <span>Mood</span>
