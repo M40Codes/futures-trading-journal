@@ -698,6 +698,64 @@ p {
   min-height: auto;
 }
 
+.pre-entry-checklist-panel {
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.pre-entry-checklist-panel h3 {
+  margin-bottom: 6px;
+}
+
+.pre-entry-checklist-panel p {
+  margin-bottom: 14px;
+}
+
+.pre-entry-checklist-table {
+  overflow-x: auto;
+}
+
+.pre-entry-checklist-head,
+.pre-entry-checklist-row {
+  display: grid;
+  grid-template-columns: minmax(90px, 0.4fr) minmax(180px, 0.7fr) minmax(360px, 1.8fr);
+  gap: 16px;
+  align-items: center;
+  min-width: 720px;
+  border-bottom: 1px solid var(--line);
+  padding: 12px 0;
+}
+
+.pre-entry-checklist-head {
+  color: #b7c7ef;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pre-entry-checklist-row {
+  cursor: pointer;
+}
+
+.pre-entry-checklist-row input {
+  width: 18px;
+  min-height: 18px;
+}
+
+.pre-entry-checklist-row strong {
+  color: #eef5ff;
+}
+
+.pre-entry-checklist-row span {
+  color: #d6e3f7;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
 .plan-risk-calculator {
   margin-top: 14px;
   border: 1px solid var(--line);

@@ -332,6 +332,50 @@
           </div>
         </div>
 
+        <div class="pre-entry-checklist-panel">
+          <div>
+            <h3>The Pre-Entry Execution Checklist</h3>
+            <p>Confirm all six conditions before taking the trade.</p>
+          </div>
+          <div class="pre-entry-checklist-table">
+            <div class="pre-entry-checklist-head">
+              <span>Status</span>
+              <span>Step</span>
+              <span>Verification Criteria</span>
+            </div>
+            <label class="pre-entry-checklist-row">
+              <input id="preEntrySetupMatch" type="checkbox">
+              <strong>1. Setup Match</strong>
+              <span>Does the current Market Type (Trend vs. Rotation) align with the Playbook?</span>
+            </label>
+            <label class="pre-entry-checklist-row">
+              <input id="preEntryHtfSweep" type="checkbox">
+              <strong>2. HTF Sweep</strong>
+              <span>Has a Higher Time Frame key liquidity level been raided/swept?</span>
+            </label>
+            <label class="pre-entry-checklist-row">
+              <input id="preEntryLtfInversion" type="checkbox">
+              <strong>3. LTF Inversion</strong>
+              <span>Is there a confirmed 1m-5m Order Flow Inversion (MSS) after the sweep?</span>
+            </label>
+            <label class="pre-entry-checklist-row">
+              <input id="preEntryMacroTiming" type="checkbox">
+              <strong>4. Macro Timing</strong>
+              <span>Is it within a Kill Zone, and are we &gt;15m past any red-folder news?</span>
+            </label>
+            <label class="pre-entry-checklist-row">
+              <input id="preEntrySmtDivergence" type="checkbox">
+              <strong>5. SMT Divergence</strong>
+              <span>Is there confirmation via NQ/ES divergence (i.e., ES did not make the new high/low)?</span>
+            </label>
+            <label class="pre-entry-checklist-row">
+              <input id="preEntryDailyBias" type="checkbox">
+              <strong>6. Daily Bias</strong>
+              <span>Is the trade direction consistent with VAH/VAL and "Inside Day" probability?</span>
+            </label>
+          </div>
+        </div>
+
         <div class="scorecard-actions">
           <span class="save-status" id="scorecardSaveStatus">Autosaves locally.</span>
           <button class="primary-button save-review-button" id="saveScorecardButton" type="button">Save Daily Review</button>

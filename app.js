@@ -145,6 +145,12 @@ const planInputs = {
   checklistLevels: document.querySelector("#planChecklistLevels"),
   checklistRisk: document.querySelector("#planChecklistRisk"),
   checklistNoChase: document.querySelector("#planChecklistNoChase"),
+  preEntrySetupMatch: document.querySelector("#preEntrySetupMatch"),
+  preEntryHtfSweep: document.querySelector("#preEntryHtfSweep"),
+  preEntryLtfInversion: document.querySelector("#preEntryLtfInversion"),
+  preEntryMacroTiming: document.querySelector("#preEntryMacroTiming"),
+  preEntrySmtDivergence: document.querySelector("#preEntrySmtDivergence"),
+  preEntryDailyBias: document.querySelector("#preEntryDailyBias"),
 };
 const planCalcInputs = {
   side: document.querySelector("#planCalcSide"),
@@ -1709,6 +1715,12 @@ function renderTradePlan() {
   planInputs.checklistLevels.checked = Boolean(plan.checklistLevels);
   planInputs.checklistRisk.checked = Boolean(plan.checklistRisk);
   planInputs.checklistNoChase.checked = Boolean(plan.checklistNoChase);
+  planInputs.preEntrySetupMatch.checked = Boolean(plan.preEntrySetupMatch);
+  planInputs.preEntryHtfSweep.checked = Boolean(plan.preEntryHtfSweep);
+  planInputs.preEntryLtfInversion.checked = Boolean(plan.preEntryLtfInversion);
+  planInputs.preEntryMacroTiming.checked = Boolean(plan.preEntryMacroTiming);
+  planInputs.preEntrySmtDivergence.checked = Boolean(plan.preEntrySmtDivergence);
+  planInputs.preEntryDailyBias.checked = Boolean(plan.preEntryDailyBias);
   renderPlanCalculator(plan.calculator ?? {});
   renderPlanChart(plan);
 }
@@ -1732,6 +1744,12 @@ function saveTradePlan() {
     checklistLevels: planInputs.checklistLevels.checked,
     checklistRisk: planInputs.checklistRisk.checked,
     checklistNoChase: planInputs.checklistNoChase.checked,
+    preEntrySetupMatch: planInputs.preEntrySetupMatch.checked,
+    preEntryHtfSweep: planInputs.preEntryHtfSweep.checked,
+    preEntryLtfInversion: planInputs.preEntryLtfInversion.checked,
+    preEntryMacroTiming: planInputs.preEntryMacroTiming.checked,
+    preEntrySmtDivergence: planInputs.preEntrySmtDivergence.checked,
+    preEntryDailyBias: planInputs.preEntryDailyBias.checked,
     updatedAt: new Date().toISOString(),
   };
   renderPlanCalculator(tradePlans[selectedPlanDate()].calculator);
