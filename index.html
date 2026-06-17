@@ -34,7 +34,7 @@
         <a class="active" href="#trade-plan" data-section="trade-plan">Trade Plan</a>
         <a href="#dashboard" data-section="dashboard">Dashboard</a>
         <a href="#trades" data-section="trades">Trades</a>
-        <a href="#reports" data-section="reports">Reports</a>
+        <a href="#reports" data-section="reports">Psychology</a>
         <a href="/probabilities.html">Probabilities</a>
         <a href="#stats-matrix" data-section="stats-matrix">Stats Matrix</a>
         <a href="#bias-calculator" data-section="bias-calculator">NQ Bias</a>
@@ -816,14 +816,103 @@
       </section>
 
       <section class="app-section" data-section-panel="reports" id="reports">
-        <section class="section-header-panel">
+        <section class="section-header-panel psychology-header-panel">
           <div>
-            <p class="eyebrow">Reports</p>
-            <h2>Trading Reports</h2>
-            <p>Monthly and behavioral summaries from the trades currently saved in the journal.</p>
+            <p class="eyebrow">Psychology Firewall</p>
+            <h2>Execution State Control</h2>
+            <p>Emotions are treated as system variables. Behavioral triggers can restrict execution access.</p>
           </div>
         </section>
-        <div class="analysis-grid" id="reportsGrid"></div>
+
+        <section class="psychology-firewall" id="psychologyFirewall">
+          <article class="psych-audit-panel" id="psychAuditPanel">
+            <div>
+              <p class="eyebrow">Pre-Market Internal Audit</p>
+              <h3>Unlock Trading Interface</h3>
+              <p>Complete this audit before interacting with the execution area.</p>
+            </div>
+            <div class="psych-audit-grid">
+              <label>
+                <span>Focus Rating</span>
+                <input id="psychFocusRating" type="range" min="1" max="5" step="1" value="3">
+                <strong id="psychFocusValue">3 / 5</strong>
+              </label>
+              <label>
+                <span>Sleep Hours</span>
+                <input id="psychSleepHours" type="number" min="0" max="16" step="0.25" placeholder="6.5">
+              </label>
+            </div>
+            <label class="psych-agreement">
+              <input id="psychFallacyAgreement" type="checkbox">
+              <span>I explicitly accept that losing trades are a standard, unavoidable cost of doing business. My edge is purely statistical over a sample of 20+ trades, not a single session. I do not need to win today to be an elite trader.</span>
+            </label>
+            <button class="primary-button" id="psychAuditSubmit" type="button">Submit Audit & Unlock</button>
+            <p class="save-status" id="psychAuditStatus">Dashboard access locked until audit is submitted.</p>
+          </article>
+
+          <section class="psychology-workspace locked" id="psychologyWorkspace">
+            <aside class="psych-trigger-panel">
+              <p class="eyebrow">Intraday Trigger Tracker</p>
+              <h3>Rapid Trigger Alerts</h3>
+              <button class="psych-trigger-button" type="button" data-trigger="Missed a Fill / Missed a Move">Missed a Fill / Missed a Move</button>
+              <button class="psych-trigger-button" type="button" data-trigger="First Stop-Out Taken">First Stop-Out Taken</button>
+              <button class="psych-trigger-button" type="button" data-trigger="Flipping Bias Continuously">Flipping Bias Continuously</button>
+              <button class="psych-trigger-button" type="button" data-trigger="Sizing Up out of Frustration">Sizing Up out of Frustration</button>
+              <button class="psych-trigger-button" type="button" data-trigger="Red Streak / Churning">Red Streak / Churning</button>
+              <div class="psych-loss-control">
+                <span>Consecutive Losses</span>
+                <div>
+                  <button class="ghost-button" id="psychLossMinus" type="button">-</button>
+                  <strong id="psychLossCount">0</strong>
+                  <button class="ghost-button" id="psychLossPlus" type="button">+</button>
+                </div>
+              </div>
+            </aside>
+
+            <section class="psych-execution-panel" id="psychExecutionPanel">
+              <div class="psych-state-grid">
+                <div class="psych-state-card">
+                  <span>Logged Triggers</span>
+                  <strong id="psychTriggerCount">0</strong>
+                </div>
+                <div class="psych-state-card">
+                  <span>Consecutive Losses</span>
+                  <strong id="psychLossState">0</strong>
+                </div>
+                <div class="psych-state-card">
+                  <span>Order Size Ceiling</span>
+                  <strong id="psychSizeCeiling">Normal</strong>
+                </div>
+              </div>
+
+              <div class="psych-entry-area" id="psychEntryArea">
+                <div>
+                  <p class="eyebrow">Simulated Execution Interface</p>
+                  <h3>Submit Order Gate</h3>
+                  <p>This button represents broker interaction. It disables automatically when the firewall breaches.</p>
+                </div>
+                <button class="primary-button psych-submit-order" id="psychSubmitOrder" type="button">Submit Order</button>
+              </div>
+
+              <div class="psych-lockout hidden" id="psychLockout">
+                <h3>SYSTEM LOCKOUT ENFORCED: PSYCHOLOGY LIMIT BREACHED</h3>
+                <p>You are reacting emotionally to market adversity instead of executing high-probability structure. The retail need to win every day is a fallacy. Your execution interface is now locked down.</p>
+                <blockquote>The elite trader treats a loss as pure data. The retail trader treats it as a personal insult.</blockquote>
+              </div>
+
+              <div class="psych-trigger-log">
+                <div class="panel-toolbar">
+                  <div>
+                    <h3>Trigger Log</h3>
+                    <p id="psychLogSummary">No triggers logged.</p>
+                  </div>
+                  <button class="danger-button" id="psychResetSession" type="button">Reset Psychology Session</button>
+                </div>
+                <div id="psychTriggerLogRows"></div>
+              </div>
+            </section>
+          </section>
+        </section>
       </section>
 
       <section class="app-section" data-section-panel="probabilities" id="probabilities">

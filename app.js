@@ -3,6 +3,7 @@ const SCORE_STORAGE_KEY = "futures-scorecard:v1";
 const SCREENSHOT_STORAGE_KEY = "futures-screenshots:v1";
 const BIAS_STORAGE_KEY = "nq-bias-calculator:v1";
 const MARKET_BIAS_STORAGE_KEY = "nq-market-bias-matrix:v1";
+const PSYCHOLOGY_STORAGE_KEY = "psychology-firewall:v1";
 
 const CONTRACTS = {
   ES: { name: "E-mini S&P 500", pointValue: 50 },
@@ -93,6 +94,29 @@ const marketBiasOutput = {
   reset: document.querySelector("#marketBiasResetButton"),
 };
 const reportsGrid = document.querySelector("#reportsGrid");
+const psychologyRefs = {
+  auditPanel: document.querySelector("#psychAuditPanel"),
+  workspace: document.querySelector("#psychologyWorkspace"),
+  focusRating: document.querySelector("#psychFocusRating"),
+  focusValue: document.querySelector("#psychFocusValue"),
+  sleepHours: document.querySelector("#psychSleepHours"),
+  agreement: document.querySelector("#psychFallacyAgreement"),
+  auditSubmit: document.querySelector("#psychAuditSubmit"),
+  auditStatus: document.querySelector("#psychAuditStatus"),
+  triggerButtons: document.querySelectorAll("[data-trigger]"),
+  triggerCount: document.querySelector("#psychTriggerCount"),
+  lossCount: document.querySelector("#psychLossCount"),
+  lossState: document.querySelector("#psychLossState"),
+  lossMinus: document.querySelector("#psychLossMinus"),
+  lossPlus: document.querySelector("#psychLossPlus"),
+  sizeCeiling: document.querySelector("#psychSizeCeiling"),
+  submitOrder: document.querySelector("#psychSubmitOrder"),
+  entryArea: document.querySelector("#psychEntryArea"),
+  lockout: document.querySelector("#psychLockout"),
+  logSummary: document.querySelector("#psychLogSummary"),
+  logRows: document.querySelector("#psychTriggerLogRows"),
+  reset: document.querySelector("#psychResetSession"),
+};
 const rrInputs = {
   entry: document.querySelector("#rrEntryPrice"),
   target: document.querySelector("#rrTargetPrice"),
@@ -446,6 +470,7 @@ let screenshots = loadScreenshots();
 let tradePlans = loadTradePlans();
 let biasState = loadBiasState();
 let marketBiasState = loadMarketBiasState();
+let psychologyState = loadPsychologyState();
 let editingId = null;
 let calendarDate = new Date();
 let serverSyncReady = false;
@@ -478,6 +503,7 @@ renderScreenshot();
 renderTradePlan();
 renderBiasCalculator();
 renderMarketBiasCalculator();
+renderPsychologyFirewall();
 renderRrValidator();
 render();
 updateClockBar();
@@ -577,6 +603,25 @@ tradovateConnectButton.addEventListener("click", connectTradovate);
 tradovateSyncButton.addEventListener("click", syncTradovateTrades);
 probabilityDimension.addEventListener("change", () => renderProbabilities(trades));
 bindMarketBiasEvents();
+psychologyRefs.focusRating?.addEventListener("input", () => {
+  psychologyState.focusRating = psychologyRefs.focusRating.value;
+  renderPsychologyFirewall();
+});
+psychologyRefs.sleepHours?.addEventListener("input", () => {
+  psychologyState.sleepHours = psychologyRefs.sleepHours.value;
+  savePsychologyState();
+});
+psychologyRefs.agreement?.addEventListener("change", () => {
+  psychologyState.agreementAccepted = psychologyRefs.agreement.checked;
+  savePsychologyState();
+});
+psychologyRefs.auditSubmit?.addEventListener("click", submitPsychologyAudit);
+psychologyRefs.triggerButtons.forEach((button) => {
+  button.addEventListener("click", () => logPsychologyTrigger(button.dataset.trigger));
+});
+psychologyRefs.lossMinus?.addEventListener("click", () => updatePsychologyLosses(-1));
+psychologyRefs.lossPlus?.addEventListener("click", () => updatePsychologyLosses(1));
+psychologyRefs.reset?.addEventListener("click", resetPsychologySession);
 sectionLinks.forEach((link) => {
   link.addEventListener("click", (event) => {
     event.preventDefault();
@@ -908,6 +953,37 @@ function loadMarketBiasState() {
 
 function saveMarketBiasState() {
   localStorage.setItem(MARKET_BIAS_STORAGE_KEY, JSON.stringify(marketBiasState));
+}
+
+function loadPsychologyState() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(PSYCHOLOGY_STORAGE_KEY));
+    return {
+      auditSubmitted: Boolean(stored?.auditSubmitted),
+      focusRating: stored?.focusRating ?? "3",
+      sleepHours: stored?.sleepHours ?? "",
+      agreementAccepted: Boolean(stored?.agreementAccepted),
+      loggedTriggers: Array.isArray(stored?.loggedTriggers) ? stored.loggedTriggers : [],
+      consecutiveLosses: Number(stored?.consecutiveLosses) || 0,
+      sizeRestricted: Boolean(stored?.sizeRestricted),
+      lockdown: Boolean(stored?.lockdown),
+    };
+  } catch {
+    return {
+      auditSubmitted: false,
+      focusRating: "3",
+      sleepHours: "",
+      agreementAccepted: false,
+      loggedTriggers: [],
+      consecutiveLosses: 0,
+      sizeRestricted: false,
+      lockdown: false,
+    };
+  }
+}
+
+function savePsychologyState() {
+  localStorage.setItem(PSYCHOLOGY_STORAGE_KEY, JSON.stringify(psychologyState));
 }
 
 function saveBiasState() {
@@ -1448,11 +1524,12 @@ function render() {
 
 function renderSecondarySections() {
   renderPlaybook(trades);
-  renderReports(trades);
+  renderReports();
   renderProbabilities(trades);
   renderStatsMatrix();
   renderBiasCalculator();
   renderMarketBiasCalculator();
+  renderPsychologyFirewall();
 }
 
 function renderScorecard() {
@@ -2687,37 +2764,114 @@ function renderPlaybook(items) {
   });
 }
 
-function renderReports(items) {
-  reportsGrid.replaceChildren();
-  const monthly = groupedStats(items, (trade) => trade.date.slice(0, 7))
-    .sort((a, b) => b.key.localeCompare(a.key));
-  const byMood = groupedStats(items, (trade) => trade.mood || "Unlabeled")
-    .sort((a, b) => b.net - a.net);
-  const bestMonth = monthly[0];
-  const bestMood = byMood[0];
-  const reviewedDays = Object.keys(scorecards).filter((date) => hasScoreForDate(date)).length;
-  const screenshotDays = Object.keys(screenshots).length;
+function renderReports() {
+  renderPsychologyFirewall();
+}
 
-  reportsGrid.append(analysisCard("Current Month", [
-    ["Trades", bestMonth?.trades ?? 0],
-    ["Win Rate", bestMonth ? `${bestMonth.winRate}%` : "0%"],
-    ["Expectancy", currency.format(bestMonth?.expectancy ?? 0)],
-    ["Net P&L", currency.format(bestMonth?.net ?? 0)],
-  ], (bestMonth?.net ?? 0) >= 0 ? "positive-card" : "negative-card"));
+function renderPsychologyFirewall() {
+  if (!psychologyRefs.workspace) return;
 
-  reportsGrid.append(analysisCard("Best Mood", [
-    ["Mood", bestMood?.key ?? "None"],
-    ["Trades", bestMood?.trades ?? 0],
-    ["Win Rate", bestMood ? `${bestMood.winRate}%` : "0%"],
-    ["Net P&L", currency.format(bestMood?.net ?? 0)],
-  ], (bestMood?.net ?? 0) >= 0 ? "positive-card" : "negative-card"));
+  psychologyRefs.focusRating.value = psychologyState.focusRating;
+  psychologyRefs.focusValue.textContent = `${psychologyState.focusRating} / 5`;
+  psychologyRefs.sleepHours.value = psychologyState.sleepHours;
+  psychologyRefs.agreement.checked = psychologyState.agreementAccepted;
+  psychologyRefs.workspace.classList.toggle("locked", !psychologyState.auditSubmitted);
+  psychologyRefs.auditPanel.classList.toggle("psych-audit-complete", psychologyState.auditSubmitted);
+  psychologyRefs.auditStatus.textContent = psychologyState.auditSubmitted
+    ? "Audit submitted. Psychology firewall is active."
+    : "Dashboard access locked until audit is submitted.";
+  psychologyRefs.triggerCount.textContent = psychologyState.loggedTriggers.length;
+  psychologyRefs.lossCount.textContent = psychologyState.consecutiveLosses;
+  psychologyRefs.lossState.textContent = psychologyState.consecutiveLosses;
+  psychologyRefs.sizeCeiling.textContent = psychologyState.sizeRestricted ? "1 contract max" : "Normal";
+  psychologyRefs.submitOrder.disabled = psychologyState.lockdown;
+  psychologyRefs.entryArea.classList.toggle("hidden", psychologyState.lockdown);
+  psychologyRefs.lockout.classList.toggle("hidden", !psychologyState.lockdown);
+  renderPsychologyTriggerLog();
+  savePsychologyState();
+}
 
-  reportsGrid.append(analysisCard("Review Discipline", [
-    ["Scored Days", reviewedDays],
-    ["Chart Days", screenshotDays],
-    ["Saved Trades", items.length],
-    ["Imported", items.filter((trade) => trade.source === "tradovate").length],
-  ]));
+function submitPsychologyAudit() {
+  if (!psychologyRefs.agreement.checked) {
+    psychologyRefs.auditStatus.textContent = "Accept the system fallacy agreement before unlocking.";
+    return;
+  }
+  const sleepHours = Number(psychologyRefs.sleepHours.value);
+  if (!Number.isFinite(sleepHours) || sleepHours < 0) {
+    psychologyRefs.auditStatus.textContent = "Enter sleep hours before unlocking.";
+    return;
+  }
+  psychologyState.auditSubmitted = true;
+  psychologyState.focusRating = psychologyRefs.focusRating.value;
+  psychologyState.sleepHours = psychologyRefs.sleepHours.value;
+  psychologyState.agreementAccepted = true;
+  renderPsychologyFirewall();
+}
+
+function logPsychologyTrigger(trigger) {
+  const entry = {
+    trigger,
+    timestamp: new Date().toISOString(),
+  };
+  psychologyState.loggedTriggers.push(entry);
+  if (trigger === "First Stop-Out Taken") {
+    psychologyState.sizeRestricted = true;
+    window.alert("RISKCeiling: Sizing force-restricted to 1 contract maximum.");
+  }
+  evaluateMentalState();
+}
+
+function updatePsychologyLosses(delta) {
+  psychologyState.consecutiveLosses = Math.max(0, psychologyState.consecutiveLosses + delta);
+  evaluateMentalState();
+}
+
+function evaluateMentalState() {
+  const loggedTriggersCount = psychologyState.loggedTriggers.length;
+  const consecutiveLosses = psychologyState.consecutiveLosses;
+  if (loggedTriggersCount >= 2 || consecutiveLosses >= 2) {
+    psychologyState.lockdown = true;
+  }
+  renderPsychologyFirewall();
+}
+
+function renderPsychologyTriggerLog() {
+  psychologyRefs.logRows.replaceChildren();
+  psychologyRefs.logSummary.textContent = psychologyState.loggedTriggers.length
+    ? `${psychologyState.loggedTriggers.length} trigger ${psychologyState.loggedTriggers.length === 1 ? "event" : "events"} logged.`
+    : "No triggers logged.";
+
+  if (!psychologyState.loggedTriggers.length) {
+    const empty = document.createElement("div");
+    empty.className = "psych-log-row";
+    empty.innerHTML = "<span>--</span><strong>No behavioral triggers logged this session.</strong>";
+    psychologyRefs.logRows.append(empty);
+    return;
+  }
+
+  psychologyState.loggedTriggers.slice().reverse().forEach((entry) => {
+    const row = document.createElement("div");
+    row.className = "psych-log-row";
+    row.innerHTML = `
+      <span>${new Date(entry.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
+      <strong>${entry.trigger}</strong>
+    `;
+    psychologyRefs.logRows.append(row);
+  });
+}
+
+function resetPsychologySession() {
+  psychologyState = {
+    auditSubmitted: false,
+    focusRating: "3",
+    sleepHours: "",
+    agreementAccepted: false,
+    loggedTriggers: [],
+    consecutiveLosses: 0,
+    sizeRestricted: false,
+    lockdown: false,
+  };
+  renderPsychologyFirewall();
 }
 
 function renderProbabilities(items) {

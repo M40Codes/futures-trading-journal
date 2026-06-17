@@ -488,6 +488,215 @@ p {
   text-align: right;
 }
 
+.psychology-firewall {
+  display: grid;
+  gap: 14px;
+}
+
+.psych-audit-panel,
+.psych-trigger-panel,
+.psych-execution-panel {
+  border: 1px solid rgba(96, 165, 250, 0.24);
+  border-radius: 8px;
+  padding: 18px;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(7, 12, 22, 0.98));
+}
+
+.psych-audit-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.psych-audit-grid strong {
+  display: inline-block;
+  margin-top: 8px;
+  color: var(--accent);
+}
+
+.psych-agreement {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 10px;
+  align-items: start;
+  margin-top: 14px;
+  border: 1px solid rgba(45, 212, 191, 0.24);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(45, 212, 191, 0.06);
+}
+
+.psych-agreement input {
+  width: 18px;
+  min-height: 18px;
+  margin-top: 3px;
+}
+
+.psychology-workspace {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.35fr) minmax(0, 1fr);
+  gap: 14px;
+  transition: filter 160ms ease, opacity 160ms ease;
+}
+
+.psychology-workspace.locked {
+  filter: blur(3px);
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.psych-trigger-panel h3 {
+  margin-bottom: 14px;
+}
+
+.psych-trigger-button {
+  width: 100%;
+  min-height: 48px;
+  margin-bottom: 10px;
+  border: 1px solid rgba(248, 113, 113, 0.28);
+  border-radius: 8px;
+  background: rgba(127, 29, 29, 0.28);
+  color: #fee2e2;
+  font-weight: 900;
+  text-align: left;
+  padding: 0 12px;
+}
+
+.psych-trigger-button:hover {
+  border-color: rgba(248, 113, 113, 0.58);
+  background: rgba(127, 29, 29, 0.42);
+}
+
+.psych-loss-control {
+  margin-top: 14px;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+
+.psych-loss-control > span {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.psych-loss-control div {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  gap: 8px;
+  align-items: center;
+}
+
+.psych-loss-control strong {
+  text-align: center;
+  color: #fff;
+  font-size: 1.5rem;
+}
+
+.psych-execution-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.psych-state-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.psych-state-card,
+.psych-entry-area {
+  border: 1px solid rgba(96, 165, 250, 0.24);
+  border-radius: 8px;
+  padding: 14px;
+  background: rgba(30, 41, 79, 0.36);
+}
+
+.psych-state-card span {
+  color: #b7c7ef;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.psych-state-card strong {
+  display: block;
+  margin-top: 8px;
+  color: #fff;
+  font-size: 1.8rem;
+}
+
+.psych-entry-area {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+}
+
+.psych-submit-order {
+  max-width: 220px;
+}
+
+.psych-submit-order:disabled {
+  cursor: not-allowed;
+  opacity: 0.3;
+}
+
+.psych-lockout {
+  border: 2px solid #ef4444;
+  border-radius: 8px;
+  padding: 18px;
+  background: rgba(127, 29, 29, 0.48);
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.08);
+}
+
+.psych-lockout h3 {
+  margin-bottom: 10px;
+  color: #fecaca;
+  font-size: 1.1rem;
+}
+
+.psych-lockout p {
+  color: #fee2e2;
+}
+
+.psych-lockout blockquote {
+  margin-top: 14px;
+  border-left: 4px solid #fca5a5;
+  border-radius: 8px;
+  padding: 14px;
+  background: rgba(7, 12, 22, 0.62);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.psych-trigger-log {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+
+.psych-log-row {
+  display: grid;
+  grid-template-columns: minmax(170px, 0.4fr) minmax(0, 1fr);
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding: 10px 0;
+}
+
+.psych-log-row span {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.psych-log-row strong {
+  color: #e5edf9;
+}
+
 .market-bias-panel {
   display: grid;
   gap: 14px;
@@ -2242,6 +2451,7 @@ td {
   .market-live-panel,
   .in-play-grid,
   .pre-market-chart-grid,
+  .psychology-workspace,
   .bias-hero-grid,
   .bias-workspace-grid,
   .plan-grid,
@@ -2312,6 +2522,9 @@ td {
   .market-bias-output-grid,
   .market-bias-input-grid,
   .market-bias-settings-grid,
+  .psych-audit-grid,
+  .psychology-workspace,
+  .psych-state-grid,
   .probability-chart-grid,
   .market-context-grid,
   .market-live-panel,
