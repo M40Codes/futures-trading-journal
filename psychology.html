@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Psychology Firewall</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=psychology-firewall-20260617">
+  <style>
+    .psych-page-shell { width: min(100% - 48px, 1480px); margin: 0 auto; padding: 26px 0 110px; }
+    .psych-proof { margin-bottom: 12px; color: #2dd4bf; font-size: 0.72rem; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; }
+    .psychology-workspace.locked { filter: blur(3px); opacity: 0.45; pointer-events: none; }
+    @media (max-width: 820px) { .psych-page-shell { width: min(100% - 20px, 1480px); padding-top: 18px; } }
+  </style>
+</head>
+<body>
+  <div class="app-frame">
+    <aside class="sidebar" aria-label="Journal navigation">
+      <div class="brand-mark">FJ</div>
+      <nav>
+        <a href="/#trade-plan">Trade Plan</a>
+        <a href="/#dashboard">Dashboard</a>
+        <a href="/#trades">Trades</a>
+        <a class="active" href="/psychology.html">Psychology</a>
+        <a href="/probabilities.html">Probabilities</a>
+        <a href="/#stats-matrix">Stats Matrix</a>
+        <a href="/#bias-calculator">NQ Bias</a>
+      </nav>
+    </aside>
+
+    <main class="psych-page-shell">
+      <p class="psych-proof">Standalone Psychology Firewall Loaded</p>
+      <section class="section-header-panel psychology-header-panel">
+        <div>
+          <p class="eyebrow">Psychology Firewall</p>
+          <h2>Execution State Control</h2>
+          <p>Emotions are active system variables. Behavioral triggers can restrict execution access when adversity hits.</p>
+        </div>
+      </section>
+
+      <section class="psychology-firewall" id="psychologyFirewall">
+        <article class="psych-audit-panel" id="psychAuditPanel">
+          <div>
+            <p class="eyebrow">Pre-Market Internal Audit</p>
+            <h3>Unlock Trading Interface</h3>
+            <p>Complete this audit before interacting with the execution area.</p>
+          </div>
+          <div class="psych-audit-grid">
+            <label>
+              <span>Focus Rating</span>
+              <input id="psychFocusRating" type="range" min="1" max="5" step="1" value="3">
+              <strong id="psychFocusValue">3 / 5</strong>
+            </label>
+            <label>
+              <span>Sleep Hours</span>
+              <input id="psychSleepHours" type="number" min="0" max="16" step="0.25" placeholder="6.5">
+            </label>
+          </div>
+          <label class="psych-agreement">
+            <input id="psychFallacyAgreement" type="checkbox">
+            <span>I explicitly accept that losing trades are a standard, unavoidable cost of doing business. My edge is purely statistical over a sample of 20+ trades, not a single session. I do not need to win today to be an elite trader.</span>
+          </label>
+          <button class="primary-button" id="psychAuditSubmit" type="button">Submit Audit & Unlock</button>
+          <p class="save-status" id="psychAuditStatus">Dashboard access locked until audit is submitted.</p>
+        </article>
+
+        <section class="psychology-workspace locked" id="psychologyWorkspace">
+          <aside class="psych-trigger-panel">
+            <p class="eyebrow">Intraday Trigger Tracker</p>
+            <h3>Rapid Trigger Alerts</h3>
+            <button class="psych-trigger-button" type="button" data-trigger="Missed a Fill / Missed a Move">Missed a Fill / Missed a Move</button>
+            <button class="psych-trigger-button" type="button" data-trigger="First Stop-Out Taken">First Stop-Out Taken</button>
+            <button class="psych-trigger-button" type="button" data-trigger="Flipping Bias Continuously">Flipping Bias Continuously</button>
+            <button class="psych-trigger-button" type="button" data-trigger="Sizing Up out of Frustration">Sizing Up out of Frustration</button>
+            <button class="psych-trigger-button" type="button" data-trigger="Red Streak / Churning">Red Streak / Churning</button>
+            <div class="psych-loss-control">
+              <span>Consecutive Losses</span>
+              <div>
+                <button class="ghost-button" id="psychLossMinus" type="button">-</button>
+                <strong id="psychLossCount">0</strong>
+                <button class="ghost-button" id="psychLossPlus" type="button">+</button>
+              </div>
+            </div>
+          </aside>
+
+          <section class="psych-execution-panel" id="psychExecutionPanel">
+            <div class="psych-state-grid">
+              <div class="psych-state-card"><span>Logged Triggers</span><strong id="psychTriggerCount">0</strong></div>
+              <div class="psych-state-card"><span>Consecutive Losses</span><strong id="psychLossState">0</strong></div>
+              <div class="psych-state-card"><span>Order Size Ceiling</span><strong id="psychSizeCeiling">Normal</strong></div>
+            </div>
+
+            <div class="psych-entry-area" id="psychEntryArea">
+              <div>
+                <p class="eyebrow">Simulated Execution Interface</p>
+                <h3>Submit Order Gate</h3>
+                <p>This button represents broker interaction. It disables automatically when the firewall breaches.</p>
+              </div>
+              <button class="primary-button psych-submit-order" id="psychSubmitOrder" type="button">Submit Order</button>
+            </div>
+
+            <div class="psych-lockout hidden" id="psychLockout">
+              <h3>🛑 SYSTEM LOCKOUT ENFORCED: PSYCHOLOGY LIMIT BREACHED</h3>
+              <p>You are reacting emotionally to market adversity instead of executing high-probability structure. The retail need to win every day is a fallacy. Your execution interface is now locked down.</p>
+              <blockquote>The elite trader treats a loss as pure data. The retail trader treats it as a personal insult.</blockquote>
+            </div>
+
+            <div class="psych-trigger-log">
+              <div class="panel-toolbar">
+                <div>
+                  <h3>Trigger Log</h3>
+                  <p id="psychLogSummary">No triggers logged.</p>
+                </div>
+                <button class="danger-button" id="psychResetSession" type="button">Reset Psychology Session</button>
+              </div>
+              <div id="psychTriggerLogRows"></div>
+            </div>
+          </section>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const PSYCHOLOGY_STORAGE_KEY = "psychology-firewall:v1";
+    const refs = {
+      auditPanel: document.querySelector("#psychAuditPanel"),
+      workspace: document.querySelector("#psychologyWorkspace"),
+      focusRating: document.querySelector("#psychFocusRating"),
+      focusValue: document.querySelector("#psychFocusValue"),
+      sleepHours: document.querySelector("#psychSleepHours"),
+      agreement: document.querySelector("#psychFallacyAgreement"),
+      auditSubmit: document.querySelector("#psychAuditSubmit"),
+      auditStatus: document.querySelector("#psychAuditStatus"),
+      triggerButtons: document.querySelectorAll("[data-trigger]"),
+      triggerCount: document.querySelector("#psychTriggerCount"),
+      lossCount: document.querySelector("#psychLossCount"),
+      lossState: document.querySelector("#psychLossState"),
+      lossMinus: document.querySelector("#psychLossMinus"),
+      lossPlus: document.querySelector("#psychLossPlus"),
+      sizeCeiling: document.querySelector("#psychSizeCeiling"),
+      submitOrder: document.querySelector("#psychSubmitOrder"),
+      entryArea: document.querySelector("#psychEntryArea"),
+      lockout: document.querySelector("#psychLockout"),
+      logSummary: document.querySelector("#psychLogSummary"),
+      logRows: document.querySelector("#psychTriggerLogRows"),
+      reset: document.querySelector("#psychResetSession"),
+    };
+
+    let psychologyState = loadPsychologyState();
+
+    function loadPsychologyState() {
+      try {
+        const stored = JSON.parse(localStorage.getItem(PSYCHOLOGY_STORAGE_KEY));
+        return {
+          auditSubmitted: Boolean(stored?.auditSubmitted),
+          focusRating: stored?.focusRating ?? "3",
+          sleepHours: stored?.sleepHours ?? "",
+          agreementAccepted: Boolean(stored?.agreementAccepted),
+          loggedTriggers: Array.isArray(stored?.loggedTriggers) ? stored.loggedTriggers : [],
+          consecutiveLosses: Number(stored?.consecutiveLosses) || 0,
+          sizeRestricted: Boolean(stored?.sizeRestricted),
+          lockdown: Boolean(stored?.lockdown),
+        };
+      } catch {
+        return freshPsychologyState();
+      }
+    }
+
+    function freshPsychologyState() {
+      return {
+        auditSubmitted: false,
+        focusRating: "3",
+        sleepHours: "",
+        agreementAccepted: false,
+        loggedTriggers: [],
+        consecutiveLosses: 0,
+        sizeRestricted: false,
+        lockdown: false,
+      };
+    }
+
+    function savePsychologyState() {
+      localStorage.setItem(PSYCHOLOGY_STORAGE_KEY, JSON.stringify(psychologyState));
+    }
+
+    function renderPsychologyFirewall() {
+      refs.focusRating.value = psychologyState.focusRating;
+      refs.focusValue.textContent = `${psychologyState.focusRating} / 5`;
+      refs.sleepHours.value = psychologyState.sleepHours;
+      refs.agreement.checked = psychologyState.agreementAccepted;
+      refs.workspace.classList.toggle("locked", !psychologyState.auditSubmitted);
+      refs.auditPanel.classList.toggle("psych-audit-complete", psychologyState.auditSubmitted);
+      refs.auditStatus.textContent = psychologyState.auditSubmitted
+        ? "Audit submitted. Psychology firewall is active."
+        : "Dashboard access locked until audit is submitted.";
+      refs.triggerCount.textContent = psychologyState.loggedTriggers.length;
+      refs.lossCount.textContent = psychologyState.consecutiveLosses;
+      refs.lossState.textContent = psychologyState.consecutiveLosses;
+      refs.sizeCeiling.textContent = psychologyState.sizeRestricted ? "1 contract max" : "Normal";
+      refs.submitOrder.disabled = psychologyState.lockdown;
+      refs.entryArea.classList.toggle("hidden", psychologyState.lockdown);
+      refs.lockout.classList.toggle("hidden", !psychologyState.lockdown);
+      renderPsychologyTriggerLog();
+      savePsychologyState();
+    }
+
+    function submitPsychologyAudit() {
+      if (!refs.agreement.checked) {
+        refs.auditStatus.textContent = "Accept the system fallacy agreement before unlocking.";
+        return;
+      }
+      const sleepHours = Number(refs.sleepHours.value);
+      if (!Number.isFinite(sleepHours) || sleepHours < 0) {
+        refs.auditStatus.textContent = "Enter sleep hours before unlocking.";
+        return;
+      }
+      psychologyState.auditSubmitted = true;
+      psychologyState.focusRating = refs.focusRating.value;
+      psychologyState.sleepHours = refs.sleepHours.value;
+      psychologyState.agreementAccepted = true;
+      renderPsychologyFirewall();
+    }
+
+    function logPsychologyTrigger(trigger) {
+      psychologyState.loggedTriggers.push({ trigger, timestamp: new Date().toISOString() });
+      if (trigger === "First Stop-Out Taken") {
+        psychologyState.sizeRestricted = true;
+        window.alert("⚠️ RISKCeiling: Sizing force-restricted to 1 contract maximum.");
+      }
+      evaluateMentalState();
+    }
+
+    function updatePsychologyLosses(delta) {
+      psychologyState.consecutiveLosses = Math.max(0, psychologyState.consecutiveLosses + delta);
+      evaluateMentalState();
+    }
+
+    function evaluateMentalState() {
+      const loggedTriggersCount = psychologyState.loggedTriggers.length;
+      const consecutiveLosses = psychologyState.consecutiveLosses;
+      if (loggedTriggersCount >= 2 || consecutiveLosses >= 2) {
+        psychologyState.lockdown = true;
+      }
+      renderPsychologyFirewall();
+    }
+
+    function renderPsychologyTriggerLog() {
+      refs.logRows.replaceChildren();
+      refs.logSummary.textContent = psychologyState.loggedTriggers.length
+        ? `${psychologyState.loggedTriggers.length} trigger ${psychologyState.loggedTriggers.length === 1 ? "event" : "events"} logged.`
+        : "No triggers logged.";
+      if (!psychologyState.loggedTriggers.length) {
+        const empty = document.createElement("div");
+        empty.className = "psych-log-row";
+        empty.innerHTML = "<span>--</span><strong>No behavioral triggers logged this session.</strong>";
+        refs.logRows.append(empty);
+        return;
+      }
+      psychologyState.loggedTriggers.slice().reverse().forEach((entry) => {
+        const row = document.createElement("div");
+        row.className = "psych-log-row";
+        row.innerHTML = `<span>${new Date(entry.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span><strong>${entry.trigger}</strong>`;
+        refs.logRows.append(row);
+      });
+    }
+
+    function resetPsychologySession() {
+      psychologyState = freshPsychologyState();
+      renderPsychologyFirewall();
+    }
+
+    refs.focusRating.addEventListener("input", () => {
+      psychologyState.focusRating = refs.focusRating.value;
+      renderPsychologyFirewall();
+    });
+    refs.sleepHours.addEventListener("input", () => {
+      psychologyState.sleepHours = refs.sleepHours.value;
+      savePsychologyState();
+    });
+    refs.agreement.addEventListener("change", () => {
+      psychologyState.agreementAccepted = refs.agreement.checked;
+      savePsychologyState();
+    });
+    refs.auditSubmit.addEventListener("click", submitPsychologyAudit);
+    refs.triggerButtons.forEach((button) => {
+      button.addEventListener("click", () => logPsychologyTrigger(button.dataset.trigger));
+    });
+    refs.lossMinus.addEventListener("click", () => updatePsychologyLosses(-1));
+    refs.lossPlus.addEventListener("click", () => updatePsychologyLosses(1));
+    refs.reset.addEventListener("click", resetPsychologySession);
+
+    renderPsychologyFirewall();
+  </script>
+</body>
+</html>
