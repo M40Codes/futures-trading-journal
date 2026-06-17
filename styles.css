@@ -31,6 +31,30 @@ body {
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+.pwa-install-button {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 9999;
+  border: 1px solid rgba(45, 212, 191, 0.45);
+  border-radius: 8px;
+  background: linear-gradient(135deg, #2dd4bf, #60a5fa);
+  color: #03111d;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.55);
+  cursor: pointer;
+  font: 900 0.92rem/1 Inter, system-ui, sans-serif;
+  padding: 13px 18px;
+}
+
+.pwa-install-button[hidden] {
+  display: none;
+}
+
+.pwa-install-button:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+
 button,
 input,
 select,

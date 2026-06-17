@@ -1,13 +1,18 @@
-const CACHE_NAME = "futures-journal-app-v1";
+const CACHE_NAME = "futures-journal-app-v2";
 const APP_SHELL = [
   "/",
   "/index.html",
   "/probabilities.html",
   "/psychology.html",
+  "/playbook.html",
+  "/login.html",
   "/styles.css",
   "/app.js",
+  "/pwa.js",
   "/manifest.webmanifest",
-  "/icon.svg"
+  "/icon.svg",
+  "/icon-192.png",
+  "/icon-512.png"
 ];
 
 self.addEventListener("install", (event) => {
@@ -32,6 +37,7 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith("/api/")) return;
 
   event.respondWith(
     fetch(request)
