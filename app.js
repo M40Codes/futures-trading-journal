@@ -1545,20 +1545,24 @@ function renderScorecard() {
 
     const rows = section.items.map((item) => {
       const value = scores[item.id] ?? 0;
-      const maxLabel = section.penalty ? item.max : `/${item.max}`;
+      const maxLabel = `/${item.max}`;
+      const sliderMin = section.penalty ? item.max : 0;
+      const sliderMax = section.penalty ? 0 : item.max;
+      const filled = section.penalty ? value < 0 : value > 0;
       return `
         <label class="score-row">
           <span>${item.label}</span>
           <div class="score-input-wrap">
             <input
-              type="number"
+              type="range"
               data-score-id="${item.id}"
-              min="${section.penalty ? item.max : 0}"
-              max="${section.penalty ? 0 : item.max}"
+              class="${section.penalty ? "penalty" : ""} ${filled ? "filled" : ""}"
+              min="${sliderMin}"
+              max="${sliderMax}"
               step="1"
               value="${value}"
             >
-            <small>${maxLabel}</small>
+            <span class="score-value ${section.penalty ? "penalty" : ""} ${filled ? "filled" : ""}" data-score-value="${item.id}">${value}${maxLabel}</span>
           </div>
         </label>
       `;
@@ -1578,7 +1582,16 @@ function renderScorecard() {
   scorecardGrid.querySelectorAll("[data-score-id]").forEach((input) => {
     input.addEventListener("input", (event) => {
       const target = event.currentTarget;
-      currentReview().scores[target.dataset.scoreId] = Number(target.value) || 0;
+      const value = Number(target.value) || 0;
+      const isPenalty = target.classList.contains("penalty");
+      const filled = isPenalty ? value < 0 : value > 0;
+      target.classList.toggle("filled", filled);
+      const valueLabel = scorecardGrid.querySelector(`[data-score-value="${target.dataset.scoreId}"]`);
+      if (valueLabel) {
+        valueLabel.classList.toggle("filled", filled);
+        valueLabel.textContent = valueLabel.textContent.replace(/^-?\d+/, String(value));
+      }
+      currentReview().scores[target.dataset.scoreId] = value;
       saveScorecard();
       updateScoreSummary();
       updateSectionTotals();
